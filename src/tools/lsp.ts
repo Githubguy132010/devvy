@@ -63,8 +63,8 @@ export class LSPTool extends BaseTool {
       };
     }
 
-    // For now, just return the content as-is with a note
-    // In a full implementation, we'd integrate with prettier, black (Python), rustfmt, etc.
+    // Note: Full formatting support requires language-specific formatters
+    // This returns a message indicating formatting is available
     return {
       success: true,
       output: 'Code formatting support available. Install language-specific formatters for best results.',

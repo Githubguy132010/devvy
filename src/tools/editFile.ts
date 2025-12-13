@@ -43,7 +43,8 @@ export class EditFileTool extends BaseTool {
         };
       }
 
-      // Replace content
+      // Replace content (only first occurrence to avoid unintended changes)
+      // Use replaceAll if you need to replace all occurrences
       const updatedContent = currentContent.replace(oldContent, newContent);
 
       // Write updated content

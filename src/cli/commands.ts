@@ -84,13 +84,7 @@ export class CommandHandler {
 
     // Check if it's an unrecognized slash command - offer fuzzy suggestions
     if (trimmed.startsWith('/')) {
-      const suggestions = this.fuzzySearchCommands(trimmed);
-      if (suggestions.length > 0) {
-        terminalUI.printError(`Unknown command: ${trimmed}`);
-        terminalUI.printInfo(`Did you mean one of these?\n  ${suggestions.join('\n  ')}`);
-      } else {
-        terminalUI.printError(`Unknown command: ${trimmed}\nType /help for available commands.`);
-      }
+      this.handleUnknownCommand(trimmed);
       return true;
     }
 
@@ -101,6 +95,16 @@ export class CommandHandler {
 
     // Default: send to coder agent
     return this.chatWithAgent('coder', trimmed);
+  }
+
+  private handleUnknownCommand(command: string): void {
+    const suggestions = this.fuzzySearchCommands(command);
+    if (suggestions.length > 0) {
+      terminalUI.printError(`Unknown command: ${command}`);
+      terminalUI.printInfo(`Did you mean one of these?\n  ${suggestions.join('\n  ')}`);
+    } else {
+      terminalUI.printError(`Unknown command: ${command}\nType /help for available commands.`);
+    }
   }
 
   private async handleAgentCommand(input: string): Promise<boolean> {
