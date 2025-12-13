@@ -41,6 +41,12 @@ export class CommandHandler {
       return true;
     }
 
+    // Model command
+    if (trimmed === '/model') {
+      await terminalUI.selectModel();
+      return true;
+    }
+
     // Agent-specific commands
     if (trimmed.startsWith('@')) {
       return this.handleAgentCommand(trimmed);

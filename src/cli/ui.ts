@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import * as readline from 'readline';
+import { select } from '@inquirer/prompts';
 import { orchestrator, llmClient, type AgentType } from '../core/index.js';
 import { conversationManager } from '../core/conversation.js';
 import { configManager, PROVIDER_CONFIG, type ApiProvider } from '../config/index.js';
@@ -23,8 +24,8 @@ const AGENT_ICONS: Record<AgentType | 'user', string> = {
   user: '🧑',
 };
 
-// Maximum models to display per owner in the model selection list
-const MAX_MODELS_PER_OWNER = 20;
+// Maximum models to display per page in the scrollable list
+const MODELS_PER_PAGE = 15;
 
 export class TerminalUI {
   private rl: readline.Interface | null = null;
@@ -72,6 +73,8 @@ export class TerminalUI {
         chalk.cyan('@brainstorm <topic>') +
         '  - All agents brainstorm together\n' +
         '\n' +
+        chalk.cyan('/model') +
+        '               - Select AI model (scrollable list)\n' +
         chalk.cyan('/config') +
         '              - Show current configuration\n' +
         chalk.cyan('/clear') +
@@ -331,57 +334,44 @@ export class TerminalUI {
         return;
       }
 
-      console.log(chalk.bold('\n🤖 Available Models:\n'));
+      console.log(chalk.bold('\n🤖 Select a model (use ↑↓ arrow keys to navigate, Enter to select):\n'));
+      console.log(chalk.dim(`  Current model: ${configManager.model}\n`));
       
-      // Group models by owner/provider for better display
-      const grouped = new Map<string, typeof models>();
-      for (const model of models) {
-        const owner = model.owned_by || 'other';
-        if (!grouped.has(owner)) {
-          grouped.set(owner, []);
-        }
-        grouped.get(owner)!.push(model);
-      }
+      // Build choices for the select prompt
+      const choices = models.map((model) => ({
+        name: model.owned_by ? `${model.id} ${chalk.dim(`(${model.owned_by})`)}` : model.id,
+        value: model.id,
+      }));
 
-      let index = 1;
-      const modelList: string[] = [];
-      
-      for (const [owner, ownerModels] of grouped) {
-        console.log(chalk.dim(`\n  ${owner}:`));
-        for (const model of ownerModels.slice(0, MAX_MODELS_PER_OWNER)) {
-          console.log(`  ${chalk.cyan(index.toString().padStart(3))}. ${model.id}`);
-          modelList.push(model.id);
-          index++;
-        }
-        if (ownerModels.length > MAX_MODELS_PER_OWNER) {
-          console.log(chalk.dim(`      ... and ${ownerModels.length - MAX_MODELS_PER_OWNER} more`));
-        }
-      }
+      // Add option to keep current model at the top
+      choices.unshift({
+        name: chalk.yellow(`Keep current: ${configManager.model}`),
+        value: '__KEEP_CURRENT__',
+      });
 
-      const rl = this.createReadlineInterface();
-      console.log(chalk.dim(`\n  Current model: ${configManager.model}\n`));
-      const choice = await this.askQuestion(rl, 'Enter model number or name (or press Enter to keep current): ');
-      rl.close();
+      const selectedModel = await select({
+        message: 'Select model:',
+        choices,
+        pageSize: MODELS_PER_PAGE,
+        loop: true,
+      });
 
-      if (!choice) {
+      if (selectedModel === '__KEEP_CURRENT__') {
         this.printInfo(`Keeping current model: ${configManager.model}`);
         return;
       }
 
-      // Check if it's a number
-      const num = parseInt(choice, 10);
-      if (!isNaN(num) && num >= 1 && num <= modelList.length) {
-        const selectedModel = modelList[num - 1];
-        if (selectedModel) {
-          configManager.model = selectedModel;
-          this.printSuccess(`Model set to: ${selectedModel}`);
-        }
-      } else {
-        // Assume it's a model name
-        configManager.model = choice;
-        this.printSuccess(`Model set to: ${choice}`);
-      }
+      configManager.model = selectedModel;
+      this.printSuccess(`Model set to: ${selectedModel}`);
     } catch (error) {
+      // Handle user cancellation (Ctrl+C) - check for ExitPromptError or common cancellation patterns
+      if (error instanceof Error && 
+          (error.name === 'ExitPromptError' || 
+           error.message.includes('force closed') ||
+           error.message.includes('cancelled'))) {
+        this.printInfo(`Keeping current model: ${configManager.model}`);
+        return;
+      }
       spinner.fail('Failed to fetch models');
       this.printError(error instanceof Error ? error.message : 'Unknown error');
       this.printInfo('You can still set a model manually with: devvy config set-model <model>');

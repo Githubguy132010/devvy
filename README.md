@@ -123,6 +123,7 @@ devvy
 @review        - Start a review cycle (Critic reviews, agents fix issues)
 @brainstorm    - All agents collaborate on a topic
 
+/model         - Select AI model (scrollable list with arrow keys)
 /config        - Show current configuration
 /clear         - Clear conversation history
 /history       - Show conversation history
