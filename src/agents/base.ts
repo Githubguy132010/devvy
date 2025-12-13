@@ -61,7 +61,7 @@ export abstract class BaseAgent {
     return message;
   }
 
-  async *respondStream(context?: string): AsyncGenerator<string, Message, unknown> {
+  async *respondStream(context?: string): AsyncGenerator<string, void, unknown> {
     const messages = this.buildMessages(context);
     let fullResponse = '';
 
@@ -72,8 +72,7 @@ export abstract class BaseAgent {
       yield chunk;
     }
 
-    const message = conversationManager.addMessage(this.role, fullResponse);
-    return message;
+    conversationManager.addMessage(this.role, fullResponse);
   }
 
   abstract getSpecializedPrompt(task: string): string;

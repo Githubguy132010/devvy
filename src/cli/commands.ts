@@ -178,7 +178,12 @@ export class CommandHandler {
         const input = await terminalUI.promptForInput();
         this.running = await this.handleCommand(input);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ERR_USE_AFTER_CLOSE') {
+        // Check for readline close error
+        if (
+          error instanceof Error &&
+          'code' in error &&
+          error.code === 'ERR_USE_AFTER_CLOSE'
+        ) {
           break;
         }
         terminalUI.printError(

@@ -67,8 +67,11 @@ export class Orchestrator {
       yield { type: 'chunk', content: chunk };
     }
 
-    const message = conversationManager.getMessages().pop()!;
-    yield { type: 'complete', content: fullContent, message };
+    const messages = conversationManager.getMessages();
+    const message = messages[messages.length - 1];
+    if (message) {
+      yield { type: 'complete', content: fullContent, message };
+    }
   }
 
   async *runReviewCycle(): AsyncGenerator<{
