@@ -5,6 +5,8 @@ import { select } from '@inquirer/prompts';
 import { orchestrator, llmClient, type AgentType } from '../core/index.js';
 import { conversationManager } from '../core/conversation.js';
 import { configManager, PROVIDER_CONFIG, type ApiProvider } from '../config/index.js';
+import { toolManager } from '../tools/index.js';
+import Fuse from 'fuse.js';
 
 const AGENT_COLORS: Record<AgentType | 'user', (text: string) => string> = {
   coder: chalk.green,
@@ -81,6 +83,10 @@ export class TerminalUI {
         '               - Clear conversation history\n' +
         chalk.cyan('/history') +
         '             - Show conversation history\n' +
+        chalk.cyan('/cwd') +
+        '                 - Show current working directory\n' +
+        chalk.cyan('/tools') +
+        '               - List available tools\n' +
         chalk.cyan('/help') +
         '                - Show this help message\n' +
         chalk.cyan('/exit') +
@@ -177,7 +183,20 @@ export class TerminalUI {
     if (config.apiBaseUrl) {
       console.log(`Base URL: ${chalk.cyan(config.apiBaseUrl)}`);
     }
+    console.log(`Current Directory: ${chalk.cyan(toolManager.getCwd())}`);
     console.log(chalk.gray('─'.repeat(50)) + '\n');
+  }
+
+  printTools(): void {
+    const tools = toolManager.getAllTools();
+    console.log(chalk.bold('\n🛠️  Available Tools:\n') + chalk.gray('─'.repeat(50)));
+    
+    for (const tool of tools) {
+      console.log(`${chalk.cyan(tool.name)}: ${tool.description}`);
+    }
+    
+    console.log(chalk.gray('─'.repeat(50)) + '\n');
+    console.log(chalk.dim('Tools can be used by agents to perform actions like running commands,\nreading/writing files, and more.\n'));
   }
 
   async promptForInput(prompt = 'You'): Promise<string> {
@@ -189,7 +208,13 @@ export class TerminalUI {
     }
 
     return new Promise((resolve) => {
-      this.rl!.question(chalk.cyan(`${prompt}> `), (answer) => {
+      // Create a styled prompt box
+      const promptSymbol = chalk.bold.cyan('❯');
+      const cwd = toolManager.getCwd();
+      const cwdShort = cwd.length > 40 ? '...' + cwd.slice(-37) : cwd;
+      const promptText = chalk.dim(`[${cwdShort}]`) + '\n' + promptSymbol + ' ';
+      
+      this.rl!.question(promptText, (answer) => {
         resolve(answer.trim());
       });
     });

@@ -1,9 +1,32 @@
 import { terminalUI } from './ui.js';
 import { orchestrator, type AgentType } from '../core/index.js';
 import { configManager } from '../config/index.js';
+import { toolManager } from '../tools/index.js';
+import Fuse from 'fuse.js';
 
 export class CommandHandler {
   private running = false;
+  private availableCommands = [
+    { name: '/exit', description: 'Exit Devvy' },
+    { name: '/quit', description: 'Exit Devvy' },
+    { name: '/help', description: 'Show help message' },
+    { name: '/config', description: 'Show current configuration' },
+    { name: '/clear', description: 'Clear conversation history' },
+    { name: '/history', description: 'Show conversation history' },
+    { name: '/model', description: 'Select AI model' },
+    { name: '/cwd', description: 'Show current working directory' },
+    { name: '/tools', description: 'List available tools' },
+  ];
+
+  private fuzzySearchCommands(query: string): string[] {
+    const fuse = new Fuse(this.availableCommands, {
+      keys: ['name', 'description'],
+      threshold: 0.4,
+    });
+
+    const results = fuse.search(query);
+    return results.slice(0, 5).map(r => r.item.name);
+  }
 
   async handleCommand(input: string): Promise<boolean> {
     const trimmed = input.trim();
@@ -44,6 +67,30 @@ export class CommandHandler {
     // Model command
     if (trimmed === '/model') {
       await terminalUI.selectModel();
+      return true;
+    }
+
+    // Current working directory command
+    if (trimmed === '/cwd') {
+      terminalUI.printInfo(`Current working directory: ${toolManager.getCwd()}`);
+      return true;
+    }
+
+    // Tools command
+    if (trimmed === '/tools') {
+      terminalUI.printTools();
+      return true;
+    }
+
+    // Check if it's an unrecognized slash command - offer fuzzy suggestions
+    if (trimmed.startsWith('/')) {
+      const suggestions = this.fuzzySearchCommands(trimmed);
+      if (suggestions.length > 0) {
+        terminalUI.printError(`Unknown command: ${trimmed}`);
+        terminalUI.printInfo(`Did you mean one of these?\n  ${suggestions.join('\n  ')}`);
+      } else {
+        terminalUI.printError(`Unknown command: ${trimmed}\nType /help for available commands.`);
+      }
       return true;
     }
 
