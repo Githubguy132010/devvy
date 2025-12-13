@@ -11,6 +11,18 @@ A terminal-based multi-agent coding assistant where AI agents collaborate, argue
   - 🏗️ **The Architect**: Designs system architecture and structure
   - 👤 **The End User**: Represents real user perspective, asks questions others might miss
 
+- **Powerful Tools**: Built-in tools for practical development tasks
+  - 🔧 Execute bash commands
+  - 📝 Read, write, and edit files
+  - 🗂️ Navigate your project with current directory tracking
+  - 🔍 LSP support foundation for code intelligence
+
+- **Enhanced User Experience**
+  - ⚡ Status spinners showing tool operation progress
+  - 🎯 Fuzzy search for commands (handles typos intelligently)
+  - 📍 Working directory display in the prompt
+  - 🎨 Improved prompt box styling
+
 - **Collaborative Discussion**: All agents see the entire conversation and can brainstorm together
 - **Review Cycles**: Iterative code review process where agents work together to improve code
 - **BYOK (Bring Your Own Key)**: Use your own API key with multiple providers
@@ -127,9 +139,33 @@ devvy
 /config        - Show current configuration
 /clear         - Clear conversation history
 /history       - Show conversation history
+/cwd           - Show current working directory
+/tools         - List available tools
 /help          - Show help
 /exit          - Exit Devvy
 ```
+
+**Note**: Commands support fuzzy search - if you make a typo, Devvy will suggest the correct command!
+
+## Tools & Capabilities
+
+Devvy includes a powerful set of tools that agents can use to assist you with various tasks:
+
+- **bash** - Execute shell commands in your current working directory
+- **writeFile** - Create new files or overwrite existing ones
+- **readFile** - Read and display file contents
+- **editFile** - Make precise edits to existing files by replacing content
+- **lsp** - Language Server Protocol support for code intelligence and formatting (foundation)
+
+### Using Tools
+
+Tools are available to agents during conversations. You can also view available tools with:
+```bash
+devvy
+> /tools
+```
+
+The prompt box displays your current working directory, making it easy to keep track of where commands and file operations will be executed.
 
 ## How It Works
 
