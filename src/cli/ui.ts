@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import * as readline from 'readline';
-import { orchestrator, type AgentType } from '../core/index.js';
+import { orchestrator, llmClient, type AgentType } from '../core/index.js';
 import { conversationManager } from '../core/conversation.js';
-import { configManager } from '../config/index.js';
+import { configManager, PROVIDER_CONFIG, type ApiProvider } from '../config/index.js';
 
 const AGENT_COLORS: Record<AgentType | 'user', (text: string) => string> = {
   coder: chalk.green,
@@ -22,6 +22,9 @@ const AGENT_ICONS: Record<AgentType | 'user', string> = {
   enduser: '👤',
   user: '🧑',
 };
+
+// Maximum models to display per owner in the model selection list
+const MAX_MODELS_PER_OWNER = 20;
 
 export class TerminalUI {
   private rl: readline.Interface | null = null;
@@ -187,6 +190,202 @@ export class TerminalUI {
         resolve(answer.trim());
       });
     });
+  }
+
+  private createReadlineInterface(): readline.Interface {
+    return readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+  }
+
+  async runSetupWizard(): Promise<boolean> {
+    console.log(
+      chalk.bold.cyan(`
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║   🚀 Welcome to Devvy Setup!                                  ║
+║                                                               ║
+║   Let's get you configured to start coding with AI agents.    ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+`)
+    );
+
+    const rl = this.createReadlineInterface();
+
+    try {
+      // Step 1: Select provider
+      console.log(chalk.bold('\n📡 Step 1: Select your AI provider\n'));
+      console.log('  ' + chalk.cyan('1)') + ' OpenAI (GPT-4, GPT-4o)');
+      console.log('  ' + chalk.cyan('2)') + ' Anthropic (Claude)');
+      console.log('  ' + chalk.cyan('3)') + ' OpenRouter (Access multiple models)');
+      console.log('  ' + chalk.cyan('4)') + ' Custom (OpenAI-compatible API)\n');
+
+      const providerChoice = await this.askQuestion(rl, 'Enter your choice (1-4): ');
+      
+      const providerMap: Record<string, ApiProvider> = {
+        '1': 'openai',
+        '2': 'anthropic',
+        '3': 'openrouter',
+        '4': 'custom',
+      };
+
+      const provider = providerMap[providerChoice];
+      if (!provider) {
+        this.printError('Invalid choice. Please run setup again.');
+        rl.close();
+        return false;
+      }
+
+      configManager.apiProvider = provider;
+      const providerConfig = PROVIDER_CONFIG[provider];
+
+      // For custom provider, ask for base URL
+      if (provider === 'custom') {
+        console.log(chalk.bold('\n🔗 Enter your custom API base URL'));
+        const baseUrl = await this.askQuestion(rl, 'Base URL: ');
+        if (baseUrl) {
+          configManager.apiBaseUrl = baseUrl;
+        }
+      }
+
+      // Step 2: Enter API key
+      console.log(chalk.bold(`\n🔑 Step 2: Enter your ${providerConfig.displayName} API key\n`));
+      
+      if (provider === 'openrouter') {
+        console.log(chalk.dim('  Get your API key at: https://openrouter.ai/keys\n'));
+      } else if (provider === 'openai') {
+        console.log(chalk.dim('  Get your API key at: https://platform.openai.com/api-keys\n'));
+      } else if (provider === 'anthropic') {
+        console.log(chalk.dim('  Get your API key at: https://console.anthropic.com/\n'));
+      }
+
+      const apiKey = await this.askQuestion(rl, 'API Key: ');
+      if (!apiKey) {
+        this.printError('API key is required. Please run setup again.');
+        rl.close();
+        return false;
+      }
+
+      configManager.apiKey = apiKey;
+
+      // Step 3: Set default model (optional)
+      console.log(chalk.bold('\n🤖 Step 3: Choose your default model\n'));
+      console.log(chalk.dim(`  Default for ${providerConfig.displayName}: ${providerConfig.defaultModel}`));
+      console.log(chalk.dim('  Press Enter to use the default, or type a model name.\n'));
+
+      const model = await this.askQuestion(rl, `Model [${providerConfig.defaultModel}]: `);
+      configManager.model = model || providerConfig.defaultModel;
+
+      // Mark setup as complete
+      configManager.setupComplete = true;
+
+      // Print success message
+      const providerDisplay = providerConfig.displayName.padEnd(42);
+      const modelDisplay = configManager.model.padEnd(45);
+      console.log(chalk.bold.green(`
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║   ✅ Setup Complete!                                          ║
+║                                                               ║
+║   Provider: ${providerDisplay}║
+║   Model: ${modelDisplay}║
+║                                                               ║
+║   You're ready to start coding with AI agents!                ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+`));
+
+      rl.close();
+      return true;
+    } catch (error) {
+      rl.close();
+      this.printError('Setup failed. Please try again.');
+      return false;
+    }
+  }
+
+  private askQuestion(rl: readline.Interface, question: string): Promise<string> {
+    return new Promise((resolve) => {
+      rl.question(chalk.cyan(question), (answer) => {
+        resolve(answer.trim());
+      });
+    });
+  }
+
+  async selectModel(): Promise<void> {
+    if (!configManager.hasApiKey()) {
+      this.printError('API key not configured. Please run "devvy setup" first.');
+      return;
+    }
+
+    const spinner = ora('Fetching available models...').start();
+
+    try {
+      const models = await llmClient.fetchModels();
+      spinner.succeed(`Found ${models.length} models`);
+
+      if (models.length === 0) {
+        this.printInfo('No models found. You can still set a model manually with: devvy config set-model <model>');
+        return;
+      }
+
+      console.log(chalk.bold('\n🤖 Available Models:\n'));
+      
+      // Group models by owner/provider for better display
+      const grouped = new Map<string, typeof models>();
+      for (const model of models) {
+        const owner = model.owned_by || 'other';
+        if (!grouped.has(owner)) {
+          grouped.set(owner, []);
+        }
+        grouped.get(owner)!.push(model);
+      }
+
+      let index = 1;
+      const modelList: string[] = [];
+      
+      for (const [owner, ownerModels] of grouped) {
+        console.log(chalk.dim(`\n  ${owner}:`));
+        for (const model of ownerModels.slice(0, MAX_MODELS_PER_OWNER)) {
+          console.log(`  ${chalk.cyan(index.toString().padStart(3))}. ${model.id}`);
+          modelList.push(model.id);
+          index++;
+        }
+        if (ownerModels.length > MAX_MODELS_PER_OWNER) {
+          console.log(chalk.dim(`      ... and ${ownerModels.length - MAX_MODELS_PER_OWNER} more`));
+        }
+      }
+
+      const rl = this.createReadlineInterface();
+      console.log(chalk.dim(`\n  Current model: ${configManager.model}\n`));
+      const choice = await this.askQuestion(rl, 'Enter model number or name (or press Enter to keep current): ');
+      rl.close();
+
+      if (!choice) {
+        this.printInfo(`Keeping current model: ${configManager.model}`);
+        return;
+      }
+
+      // Check if it's a number
+      const num = parseInt(choice, 10);
+      if (!isNaN(num) && num >= 1 && num <= modelList.length) {
+        const selectedModel = modelList[num - 1];
+        if (selectedModel) {
+          configManager.model = selectedModel;
+          this.printSuccess(`Model set to: ${selectedModel}`);
+        }
+      } else {
+        // Assume it's a model name
+        configManager.model = choice;
+        this.printSuccess(`Model set to: ${choice}`);
+      }
+    } catch (error) {
+      spinner.fail('Failed to fetch models');
+      this.printError(error instanceof Error ? error.message : 'Unknown error');
+      this.printInfo('You can still set a model manually with: devvy config set-model <model>');
+    }
   }
 
   close(): void {

@@ -161,8 +161,14 @@ export class CommandHandler {
   async startInteractiveSession(): Promise<void> {
     this.running = true;
 
-    // Check for API key
-    if (!configManager.hasApiKey()) {
+    // Check for first run - run interactive setup
+    if (configManager.isFirstRun()) {
+      const setupSuccess = await terminalUI.runSetupWizard();
+      if (!setupSuccess) {
+        return;
+      }
+    } else if (!configManager.hasApiKey()) {
+      // Has been configured before but no API key
       terminalUI.printInfo(
         'No API key configured. Please set your API key:\n' +
           '  - Set OPENAI_API_KEY environment variable, or\n' +

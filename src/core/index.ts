@@ -6,7 +6,7 @@ export {
   type ConversationContext,
   type CodeBlock,
 } from './conversation.js';
-export { LLMClient, llmClient, type LLMMessage, type LLMResponse } from './llm.js';
+export { LLMClient, llmClient, type LLMMessage, type LLMResponse, type ModelInfo } from './llm.js';
 export {
   Orchestrator,
   orchestrator,

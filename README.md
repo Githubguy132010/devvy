@@ -13,7 +13,7 @@ A terminal-based multi-agent coding assistant where AI agents collaborate, argue
 
 - **Collaborative Discussion**: All agents see the entire conversation and can brainstorm together
 - **Review Cycles**: Iterative code review process where agents work together to improve code
-- **BYOK (Bring Your Own Key)**: Use your own API key for OpenAI or compatible providers
+- **BYOK (Bring Your Own Key)**: Use your own API key with multiple providers
 
 ## Installation
 
@@ -32,29 +32,69 @@ npm run build
 npm link
 ```
 
-## Configuration
+## Quick Start
 
-### Setting up your API key (BYOK)
+On first run, Devvy will guide you through an interactive setup wizard:
 
 ```bash
-# Option 1: Set environment variable
-export OPENAI_API_KEY=your-api-key-here
-
-# Option 2: Use the config command
-devvy config set-key your-api-key-here
-
-# Option 3: Use a different provider/model
-devvy config set-provider openai
-devvy config set-model gpt-4o
-
-# For custom OpenAI-compatible APIs
-devvy config set-base-url https://your-api-endpoint.com/v1
+devvy
 ```
 
-### View current configuration
+The setup wizard will help you:
+1. Select your AI provider (OpenAI, Anthropic, OpenRouter, or custom)
+2. Enter your API key
+3. Choose your default model
+
+You can also run the setup wizard anytime with:
+```bash
+devvy setup
+```
+
+## Supported Providers
+
+- **OpenAI** - GPT-4, GPT-4o, GPT-4-turbo
+- **Anthropic** - Claude 3.5, Claude 3
+- **OpenRouter** - Access to 100+ models from various providers
+- **Custom** - Any OpenAI-compatible API endpoint
+
+## Configuration
+
+### Interactive Setup (Recommended)
 
 ```bash
+devvy setup
+```
+
+### Manual Configuration
+
+```bash
+# Set your API key
+devvy config set-key your-api-key-here
+
+# Set provider (openai, anthropic, openrouter, custom)
+devvy config set-provider openrouter
+
+# Select model interactively (fetches available models from API)
+devvy config set-model
+
+# Or set model directly
+devvy config set-model gpt-4o
+
+# For custom providers, set the base URL
+devvy config set-base-url https://your-api-endpoint.com/v1
+
+# View current configuration
 devvy config show
+```
+
+### Environment Variables
+
+You can also use environment variables:
+
+```bash
+export OPENAI_API_KEY=your-key      # For OpenAI
+export ANTHROPIC_API_KEY=your-key   # For Anthropic  
+export OPENROUTER_API_KEY=your-key  # For OpenRouter
 ```
 
 ## Usage
@@ -137,14 +177,6 @@ Currently, all conversation history is kept in memory during a session. Future i
 - Persistent conversation storage
 - Context window management for long conversations
 - Summarization for older messages
-
-## Supported Models
-
-Any OpenAI-compatible API works, including:
-- OpenAI (gpt-4o, gpt-4-turbo, gpt-3.5-turbo)
-- Azure OpenAI
-- Local models via LM Studio, Ollama, etc.
-- Other OpenAI-compatible providers
 
 ## License
 

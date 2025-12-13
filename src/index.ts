@@ -2,7 +2,7 @@
 
 import { Command } from 'commander';
 import { commandHandler } from './cli/index.js';
-import { configManager } from './config/index.js';
+import { configManager, type ApiProvider } from './config/index.js';
 import { llmClient } from './core/index.js';
 import { terminalUI } from './cli/ui.js';
 
@@ -19,6 +19,14 @@ program
   .description('Start an interactive chat session with the agents')
   .action(async () => {
     await commandHandler.startInteractiveSession();
+  });
+
+// Setup command
+program
+  .command('setup')
+  .description('Run the interactive setup wizard')
+  .action(async () => {
+    await terminalUI.runSetupWizard();
   });
 
 // Configuration commands
@@ -38,26 +46,34 @@ configCmd
   .description('Set your API key (BYOK - Bring Your Own Key)')
   .action((key: string) => {
     configManager.apiKey = key;
+    configManager.setupComplete = true;
     terminalUI.printSuccess('API key saved successfully!');
   });
 
 configCmd
-  .command('set-model <model>')
-  .description('Set the model to use (e.g., gpt-4o, gpt-4-turbo)')
-  .action((model: string) => {
-    configManager.model = model;
-    terminalUI.printSuccess(`Model set to: ${model}`);
+  .command('set-model [model]')
+  .description('Set the model to use (fetches available models if no model specified)')
+  .action(async (model?: string) => {
+    if (model) {
+      configManager.model = model;
+      terminalUI.printSuccess(`Model set to: ${model}`);
+    } else {
+      // Fetch and display available models
+      await terminalUI.selectModel();
+    }
   });
 
 configCmd
   .command('set-provider <provider>')
-  .description('Set the API provider (openai, anthropic, custom)')
+  .description('Set the API provider (openai, anthropic, openrouter, custom)')
   .action((provider: string) => {
-    if (!['openai', 'anthropic', 'custom'].includes(provider)) {
-      terminalUI.printError('Invalid provider. Choose from: openai, anthropic, custom');
+    const validProviders = ['openai', 'anthropic', 'openrouter', 'custom'];
+    if (!validProviders.includes(provider)) {
+      terminalUI.printError(`Invalid provider. Choose from: ${validProviders.join(', ')}`);
       return;
     }
-    configManager.apiProvider = provider as 'openai' | 'anthropic' | 'custom';
+    configManager.apiProvider = provider as ApiProvider;
+    llmClient.resetClient();
     terminalUI.printSuccess(`Provider set to: ${provider}`);
   });
 

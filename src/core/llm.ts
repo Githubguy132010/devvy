@@ -15,6 +15,11 @@ export interface LLMResponse {
   };
 }
 
+export interface ModelInfo {
+  id: string;
+  owned_by?: string;
+}
+
 export class LLMClient {
   private client: OpenAI | null = null;
 
@@ -31,6 +36,27 @@ export class LLMClient {
       });
     }
     return this.client;
+  }
+
+  async fetchModels(): Promise<ModelInfo[]> {
+    const client = this.getClient();
+    
+    try {
+      const response = await client.models.list();
+      const models: ModelInfo[] = [];
+      
+      for await (const model of response) {
+        models.push({
+          id: model.id,
+          owned_by: model.owned_by,
+        });
+      }
+      
+      // Sort models alphabetically
+      return models.sort((a, b) => a.id.localeCompare(b.id));
+    } catch (error) {
+      throw new Error(`Failed to fetch models: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async chat(messages: LLMMessage[], options?: { temperature?: number }): Promise<LLMResponse> {

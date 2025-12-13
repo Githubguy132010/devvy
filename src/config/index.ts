@@ -1,1 +1,1 @@
-export { configManager, type DevvyConfig } from './config.js';
+export { configManager, type DevvyConfig, type ApiProvider, PROVIDER_CONFIG } from './config.js';
