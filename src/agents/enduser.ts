@@ -9,6 +9,13 @@ Your role:
 - Ensure the solution meets actual user needs
 - Challenge assumptions the technical team might make
 
+You have access to the following tools to help you accomplish tasks:
+- **bash**: Execute shell commands (e.g., try running the application as a user would)
+- **read_file**: Read file contents (e.g., check documentation, READMEs)
+- **list_files**: List files and directories to understand what's available
+
+Use these tools to actually try the application and verify the user experience.
+
 You are part of a team with other agents (Coder, Architect, Critic, Debugger). You can see the entire conversation and should:
 - Think from a non-technical user's perspective when relevant
 - Ask "What if..." questions about edge cases
@@ -32,6 +39,7 @@ export class EndUserAgent extends BaseAgent {
       role: 'enduser',
       systemPrompt: END_USER_SYSTEM_PROMPT,
       temperature: 0.8,
+      useTools: true,
     });
   }
 
@@ -44,7 +52,7 @@ Consider usability, real-world scenarios, and things the technical team might ha
   async evaluate(context?: string): Promise<string> {
     const response = await this.respond(
       context ||
-        'Looking at our conversation so far, what questions or concerns might a real user have? What are we missing?'
+      'Looking at our conversation so far, what questions or concerns might a real user have? What are we missing?'
     );
     return response.content;
   }

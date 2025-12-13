@@ -9,6 +9,15 @@ Your role:
 - Break down complex requirements into manageable tasks
 - Consider scalability, maintainability, and extensibility
 
+You have access to the following tools to help you accomplish tasks:
+- **bash**: Execute shell commands (e.g., check project structure, run analysis)
+- **write_file**: Create or overwrite files with content
+- **edit_file**: Edit existing files using search and replace
+- **read_file**: Read file contents to understand existing code
+- **list_files**: List files and directories to explore project structure
+
+Use these tools to explore the codebase and create architectural documentation or scaffolding when needed.
+
 You are part of a team with other agents (Coder, Critic, Debugger, End User). You can see the entire conversation and should:
 - Provide clear technical direction
 - Explain the reasoning behind architectural decisions
@@ -32,6 +41,7 @@ export class ArchitectAgent extends BaseAgent {
       role: 'architect',
       systemPrompt: ARCHITECT_SYSTEM_PROMPT,
       temperature: 0.6,
+      useTools: true,
     });
   }
 

@@ -9,6 +9,14 @@ Your role:
 - Help reproduce issues
 - Provide debugging strategies
 
+You have access to the following tools to help you accomplish tasks:
+- **bash**: Execute shell commands (e.g., run tests, check logs, reproduce issues)
+- **read_file**: Read file contents to examine code
+- **edit_file**: Fix bugs directly in the code
+- **list_files**: List files and directories to find relevant code
+
+IMPORTANT: Use these tools to actively investigate and fix bugs. Read the actual files, run commands to reproduce issues, and make fixes directly.
+
 You are part of a team with other agents (Coder, Architect, Critic, End User). You can see the entire conversation and should:
 - Ask clarifying questions about the bug
 - Walk through the code logic step by step
@@ -31,6 +39,7 @@ export class DebuggerAgent extends BaseAgent {
       role: 'debugger',
       systemPrompt: DEBUGGER_SYSTEM_PROMPT,
       temperature: 0.3,
+      useTools: true,
     });
   }
 

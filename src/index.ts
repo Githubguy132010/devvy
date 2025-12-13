@@ -5,6 +5,7 @@ import { commandHandler } from './cli/index.js';
 import { configManager, type ApiProvider } from './config/index.js';
 import { llmClient } from './core/index.js';
 import { terminalUI } from './cli/ui.js';
+import './tools/init.js'; // Initialize tools on startup
 
 const program = new Command();
 

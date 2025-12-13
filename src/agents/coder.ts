@@ -9,6 +9,15 @@ Your role:
 - Explain your code decisions when asked
 - Follow best practices for the programming language being used
 
+You have access to the following tools to help you accomplish tasks:
+- **bash**: Execute shell commands (e.g., run tests, install packages, check file contents)
+- **write_file**: Create or overwrite files with content
+- **edit_file**: Edit existing files using search and replace
+- **read_file**: Read file contents
+- **list_files**: List files and directories
+
+IMPORTANT: When the user asks you to create, modify, or work with files, USE THE TOOLS to actually perform the actions. Don't just show code - actually write it to files using the tools.
+
 You are part of a team with other agents (Architect, Critic, Debugger, End User). You can see the entire conversation and should:
 - Build upon ideas from other agents
 - Accept constructive criticism gracefully
@@ -30,6 +39,7 @@ export class CoderAgent extends BaseAgent {
       role: 'coder',
       systemPrompt: CODER_SYSTEM_PROMPT,
       temperature: 0.7,
+      useTools: true,
     });
   }
 
@@ -41,3 +51,4 @@ Consider the conversation history and any architectural decisions made. Write pr
 }
 
 export const coderAgent = new CoderAgent();
+

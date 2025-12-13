@@ -1,4 +1,4 @@
-import { llmClient, type LLMMessage } from '../core/llm.js';
+import { llmClient, type LLMMessage, type ToolCall } from '../core/llm.js';
 import { conversationManager, type AgentRole, type Message } from '../core/conversation.js';
 
 export interface AgentConfig {
@@ -6,6 +6,7 @@ export interface AgentConfig {
   role: AgentRole;
   systemPrompt: string;
   temperature?: number;
+  useTools?: boolean;
 }
 
 export abstract class BaseAgent {
@@ -55,6 +56,7 @@ export abstract class BaseAgent {
     const messages = this.buildMessages(context);
     const response = await llmClient.chat(messages, {
       temperature: this.config.temperature,
+      tools: this.config.useTools,
     });
 
     const message = conversationManager.addMessage(this.role, response.content);
@@ -62,18 +64,65 @@ export abstract class BaseAgent {
   }
 
   async *respondStream(context?: string): AsyncGenerator<string, void, unknown> {
-    const messages = this.buildMessages(context);
+    const messages: LLMMessage[] = this.buildMessages(context);
     let fullResponse = '';
+    const useTools = this.config.useTools ?? true;
 
-    for await (const chunk of llmClient.streamChat(messages, {
-      temperature: this.config.temperature,
-    })) {
-      fullResponse += chunk;
-      yield chunk;
+    // Tool call loop - keep calling until we get a text response
+    let iteration = 0;
+    const maxIterations = 10;
+
+    while (iteration < maxIterations) {
+      iteration++;
+      let pendingToolCalls: ToolCall[] = [];
+
+      for await (const chunk of llmClient.streamChat(messages, {
+        temperature: this.config.temperature,
+        tools: useTools,
+      })) {
+        if (typeof chunk === 'string') {
+          fullResponse += chunk;
+          yield chunk;
+        } else if ('toolCalls' in chunk) {
+          pendingToolCalls = chunk.toolCalls;
+        }
+      }
+
+      // If no tool calls, we're done
+      if (pendingToolCalls.length === 0) {
+        break;
+      }
+
+      // Execute tool calls
+      const toolResults = await llmClient.executeToolCalls(pendingToolCalls);
+
+      // Add assistant message with tool calls to conversation
+      messages.push({
+        role: 'assistant',
+        content: null,
+        tool_calls: pendingToolCalls,
+      });
+
+      // Add tool results to messages
+      for (const { toolCallId, result } of toolResults) {
+        messages.push({
+          role: 'tool',
+          content: result.success
+            ? result.output || 'Success'
+            : `Error: ${result.error}`,
+          tool_call_id: toolCallId,
+        });
+
+        // Yield tool output as part of the stream
+        yield `\n\n📎 **Tool output:**\n\`\`\`\n${result.success ? result.output : result.error}\n\`\`\`\n\n`;
+      }
     }
 
-    conversationManager.addMessage(this.role, fullResponse);
+    if (fullResponse) {
+      conversationManager.addMessage(this.role, fullResponse);
+    }
   }
 
   abstract getSpecializedPrompt(task: string): string;
 }
+

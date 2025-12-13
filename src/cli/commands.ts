@@ -1,6 +1,7 @@
 import { terminalUI } from './ui.js';
 import { orchestrator, type AgentType } from '../core/index.js';
 import { configManager } from '../config/index.js';
+import { fuzzyMatchCommand, SLASH_COMMANDS } from './fuzzy.js';
 
 export class CommandHandler {
   private running = false;
@@ -10,50 +11,65 @@ export class CommandHandler {
 
     if (!trimmed) return true;
 
-    // Exit commands
-    if (trimmed === '/exit' || trimmed === '/quit' || trimmed === 'exit' || trimmed === 'quit') {
-      terminalUI.printInfo('Goodbye! 👋');
-      return false;
+    // Fuzzy match slash commands
+    if (trimmed.startsWith('/')) {
+      const matched = fuzzyMatchCommand(trimmed.split(' ')[0], SLASH_COMMANDS);
+      if (matched && matched !== trimmed.split(' ')[0]) {
+        terminalUI.printInfo(`Using: ${matched}`);
+        return this.executeSlashCommand(matched);
+      }
+      return this.executeSlashCommand(trimmed);
     }
 
-    // Help command
-    if (trimmed === '/help' || trimmed === 'help') {
-      terminalUI.printHelp();
-      return true;
-    }
-
-    // Config command
-    if (trimmed === '/config') {
-      terminalUI.printConfig();
-      return true;
-    }
-
-    // Clear command
-    if (trimmed === '/clear') {
-      orchestrator.clearConversation();
-      terminalUI.printSuccess('Conversation cleared.');
-      return true;
-    }
-
-    // History command
-    if (trimmed === '/history') {
-      terminalUI.printConversationHistory();
-      return true;
-    }
-
-    // Model command
-    if (trimmed === '/model') {
-      await terminalUI.selectModel();
-      return true;
-    }
-
-    // Agent-specific commands
+    // Agent-specific commands with fuzzy matching
     if (trimmed.startsWith('@')) {
       return this.handleAgentCommand(trimmed);
     }
 
     // Default: send to coder agent
     return this.chatWithAgent('coder', trimmed);
+  }
+
+  private async executeSlashCommand(command: string): Promise<boolean> {
+    // Exit commands
+    if (command === '/exit' || command === '/quit') {
+      terminalUI.printInfo('Goodbye! 👋');
+      return false;
+    }
+
+    // Help command
+    if (command === '/help') {
+      terminalUI.printHelp();
+      return true;
+    }
+
+    // Config command
+    if (command === '/config') {
+      terminalUI.printConfig();
+      return true;
+    }
+
+    // Clear command
+    if (command === '/clear') {
+      orchestrator.clearConversation();
+      terminalUI.printSuccess('Conversation cleared.');
+      return true;
+    }
+
+    // History command
+    if (command === '/history') {
+      terminalUI.printConversationHistory();
+      return true;
+    }
+
+    // Model command
+    if (command === '/model') {
+      await terminalUI.selectModel();
+      return true;
+    }
+
+    terminalUI.printError(`Unknown command: ${command}`);
+    return true;
   }
 
   private async handleAgentCommand(input: string): Promise<boolean> {
@@ -177,8 +193,8 @@ export class CommandHandler {
       // Has been configured before but no API key
       terminalUI.printInfo(
         'No API key configured. Please set your API key:\n' +
-          '  - Set OPENAI_API_KEY environment variable, or\n' +
-          '  - Run: devvy config set-key <your-key>'
+        '  - Set OPENAI_API_KEY environment variable, or\n' +
+        '  - Run: devvy config set-key <your-key>'
       );
     }
 
@@ -194,7 +210,7 @@ export class CommandHandler {
         if (
           error instanceof Error &&
           'code' in error &&
-          error.code === 'ERR_USE_AFTER_CLOSE'
+          (error as NodeJS.ErrnoException).code === 'ERR_USE_AFTER_CLOSE'
         ) {
           break;
         }

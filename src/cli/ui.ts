@@ -31,7 +31,7 @@ export class TerminalUI {
   private rl: readline.Interface | null = null;
   private currentSpinner: ReturnType<typeof ora> | null = null;
 
-  constructor() {}
+  constructor() { }
 
   printBanner(): void {
     console.log(
@@ -56,38 +56,38 @@ export class TerminalUI {
   printHelp(): void {
     console.log(
       chalk.bold('\nAvailable Commands:\n') +
-        chalk.gray('─'.repeat(50)) +
-        '\n' +
-        chalk.cyan('@coder <message>') +
-        '     - Ask the Coder agent\n' +
-        chalk.cyan('@critic <message>') +
-        '    - Ask the Critic agent\n' +
-        chalk.cyan('@debugger <message>') +
-        '  - Ask the Debugger agent\n' +
-        chalk.cyan('@architect <message>') +
-        ' - Ask the Architect agent\n' +
-        chalk.cyan('@enduser <message>') +
-        '   - Ask the End User agent\n' +
-        chalk.cyan('@review') +
-        '              - Start a review cycle\n' +
-        chalk.cyan('@brainstorm <topic>') +
-        '  - All agents brainstorm together\n' +
-        '\n' +
-        chalk.cyan('/model') +
-        '               - Select AI model (scrollable list)\n' +
-        chalk.cyan('/config') +
-        '              - Show current configuration\n' +
-        chalk.cyan('/clear') +
-        '               - Clear conversation history\n' +
-        chalk.cyan('/history') +
-        '             - Show conversation history\n' +
-        chalk.cyan('/help') +
-        '                - Show this help message\n' +
-        chalk.cyan('/exit') +
-        '                - Exit Devvy\n' +
-        chalk.gray('─'.repeat(50)) +
-        '\n' +
-        chalk.dim('Or just type a message to chat with the default agent (Coder)\n')
+      chalk.gray('─'.repeat(50)) +
+      '\n' +
+      chalk.cyan('@coder <message>') +
+      '     - Ask the Coder agent\n' +
+      chalk.cyan('@critic <message>') +
+      '    - Ask the Critic agent\n' +
+      chalk.cyan('@debugger <message>') +
+      '  - Ask the Debugger agent\n' +
+      chalk.cyan('@architect <message>') +
+      ' - Ask the Architect agent\n' +
+      chalk.cyan('@enduser <message>') +
+      '   - Ask the End User agent\n' +
+      chalk.cyan('@review') +
+      '              - Start a review cycle\n' +
+      chalk.cyan('@brainstorm <topic>') +
+      '  - All agents brainstorm together\n' +
+      '\n' +
+      chalk.cyan('/model') +
+      '               - Select AI model (scrollable list)\n' +
+      chalk.cyan('/config') +
+      '              - Show current configuration\n' +
+      chalk.cyan('/clear') +
+      '               - Clear conversation history\n' +
+      chalk.cyan('/history') +
+      '             - Show conversation history\n' +
+      chalk.cyan('/help') +
+      '                - Show this help message\n' +
+      chalk.cyan('/exit') +
+      '                - Exit Devvy\n' +
+      chalk.gray('─'.repeat(50)) +
+      '\n' +
+      chalk.dim('Or just type a message to chat with the default agent (Coder)\n')
     );
   }
 
@@ -180,6 +180,28 @@ export class TerminalUI {
     console.log(chalk.gray('─'.repeat(50)) + '\n');
   }
 
+  getCwd(): string {
+    const cwd = process.cwd();
+    const home = process.env.HOME || '';
+    return cwd.replace(home, '~');
+  }
+
+  printPromptBox(): void {
+    const width = Math.min(process.stdout.columns || 80, 76);
+    const cwd = this.getCwd();
+    const cwdLine = `  ${chalk.dim('📁')} ${chalk.dim(cwd)}`;
+
+    console.log('');
+    console.log(chalk.gray('┌' + '─'.repeat(width - 2) + '┐'));
+    console.log(chalk.gray('│') + cwdLine + ' '.repeat(Math.max(0, width - 4 - cwd.length)) + chalk.gray('│'));
+    console.log(chalk.gray('├' + '─'.repeat(width - 2) + '┤'));
+  }
+
+  printPromptBoxBottom(): void {
+    const width = Math.min(process.stdout.columns || 80, 76);
+    console.log(chalk.gray('└' + '─'.repeat(width - 2) + '┘'));
+  }
+
   async promptForInput(prompt = 'You'): Promise<string> {
     if (!this.rl) {
       this.rl = readline.createInterface({
@@ -188,8 +210,12 @@ export class TerminalUI {
       });
     }
 
+    // Show styled prompt box with CWD
+    this.printPromptBox();
+
     return new Promise((resolve) => {
-      this.rl!.question(chalk.cyan(`${prompt}> `), (answer) => {
+      this.rl!.question(chalk.gray('│ ') + chalk.cyan(`${prompt}`) + chalk.dim(' ❯ '), (answer) => {
+        this.printPromptBoxBottom();
         resolve(answer.trim());
       });
     });
@@ -226,7 +252,7 @@ export class TerminalUI {
       console.log('  ' + chalk.cyan('4)') + ' Custom (OpenAI-compatible API)\n');
 
       const providerChoice = await this.askQuestion(rl, 'Enter your choice (1-4): ');
-      
+
       const providerMap: Record<string, ApiProvider> = {
         '1': 'openai',
         '2': 'anthropic',
@@ -255,7 +281,7 @@ export class TerminalUI {
 
       // Step 2: Enter API key
       console.log(chalk.bold(`\n🔑 Step 2: Enter your ${providerConfig.displayName} API key\n`));
-      
+
       if (provider === 'openrouter') {
         console.log(chalk.dim('  Get your API key at: https://openrouter.ai/keys\n'));
       } else if (provider === 'openai') {
@@ -334,9 +360,10 @@ export class TerminalUI {
         return;
       }
 
-      console.log(chalk.bold('\n🤖 Select a model (use ↑↓ arrow keys to navigate, Enter to select):\n'));
+      console.log(chalk.bold('\n🤖 Select a model (type to filter, ↑↓ to navigate, Enter to select):\n'));
       console.log(chalk.dim(`  Current model: ${configManager.model}\n`));
-      
+      console.log(chalk.dim('  💡 Tip: Type part of the model name to filter the list\n'));
+
       // Build choices for the select prompt
       const choices = models.map((model) => ({
         name: model.owned_by ? `${model.id} ${chalk.dim(`(${model.owned_by})`)}` : model.id,
@@ -365,10 +392,10 @@ export class TerminalUI {
       this.printSuccess(`Model set to: ${selectedModel}`);
     } catch (error) {
       // Handle user cancellation (Ctrl+C) - check for ExitPromptError or common cancellation patterns
-      if (error instanceof Error && 
-          (error.name === 'ExitPromptError' || 
-           error.message.includes('force closed') ||
-           error.message.includes('cancelled'))) {
+      if (error instanceof Error &&
+        (error.name === 'ExitPromptError' ||
+          error.message.includes('force closed') ||
+          error.message.includes('cancelled'))) {
         this.printInfo(`Keeping current model: ${configManager.model}`);
         return;
       }
