@@ -139,7 +139,7 @@ export class CodeFormatter {
 
         for (const match of matches) {
             const [fullMatch, language, code] = match;
-            if (language && code) {
+      if (language && code && !fullMatch.includes('hljs')) {
                 const formattedCode = await this.format(code.trim(), language, cwd);
                 const formattedBlock = `\`\`\`${language}\n${formattedCode}\n\`\`\``;
                 result = result.replace(fullMatch, formattedBlock);

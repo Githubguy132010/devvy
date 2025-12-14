@@ -1,1 +1,2 @@
-export { CodeFormatter, codeFormatter } from './formatter.js';
+export * from './formatter.js';
+export * from './renderer.js';

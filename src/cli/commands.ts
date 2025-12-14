@@ -1,5 +1,5 @@
 import { terminalUI } from './ui.js';
-import { orchestrator, type AgentType } from '../core/index.js';
+import { orchestrator, roleSwitcher, askerHandler, type AgentType } from '../core/index.js';
 import { configManager } from '../config/index.js';
 import { fuzzyMatchCommand, SLASH_COMMANDS } from './fuzzy.js';
 
@@ -10,6 +10,11 @@ export class CommandHandler {
     const trimmed = input.trim();
 
     if (!trimmed) return true;
+
+    if (roleSwitcher.shouldSwitch(trimmed)) {
+      await roleSwitcher.switch(trimmed);
+      return true;
+    }
 
     // Fuzzy match slash commands
     if (trimmed.startsWith('/')) {
@@ -107,76 +112,94 @@ export class CommandHandler {
   }
 
   private async chatWithAgent(agent: AgentType, message: string): Promise<boolean> {
+    terminalUI.startSpinner(`${agent} is thinking...`);
     try {
-      // Add user message to conversation
       orchestrator.addUserMessage(message);
 
-      terminalUI.printAgentStart(agent);
-
+      let fullContent = '';
       for await (const event of orchestrator.runAgent(agent, message)) {
         if (event.type === 'chunk') {
-          terminalUI.printChunk(event.content);
+          fullContent += event.content;
         }
       }
 
+      terminalUI.stopSpinner();
+      terminalUI.printAgentStart(agent);
+      terminalUI.printChunk(fullContent);
       terminalUI.printComplete();
+      await askerHandler.handle(agent, fullContent);
     } catch (error) {
+      terminalUI.stopSpinner(false);
       terminalUI.printError(
         error instanceof Error ? error.message : 'An unknown error occurred'
       );
     }
-
     return true;
   }
 
   private async runReviewCycle(): Promise<boolean> {
+    terminalUI.printInfo('Starting review cycle...');
     try {
-      terminalUI.printInfo('Starting review cycle...');
-
       for await (const event of orchestrator.runReviewCycle()) {
         if (event.phase === 'start') {
-          terminalUI.printAgentStart(event.agent);
-        } else if (event.phase === 'chunk' && event.content) {
-          terminalUI.printChunk(event.content);
+          terminalUI.startSpinner(`${event.agent} is thinking...`);
         } else if (event.phase === 'complete') {
+          terminalUI.stopSpinner();
+          terminalUI.printAgentStart(event.agent);
+          terminalUI.printChunk(event.content || '');
           terminalUI.printComplete();
-
+          await askerHandler.handle(event.agent, event.content || '');
           if (event.approved) {
             terminalUI.printSuccess('Code approved! ✅');
           }
         }
       }
     } catch (error) {
+      terminalUI.stopSpinner(false);
       terminalUI.printError(
         error instanceof Error ? error.message : 'An unknown error occurred'
       );
     }
-
     return true;
   }
 
   private async runBrainstorm(topic: string): Promise<boolean> {
+    terminalUI.printInfo(`Starting brainstorm session on: ${topic}`);
+    orchestrator.addUserMessage(`Let's brainstorm about: ${topic}`);
     try {
-      terminalUI.printInfo(`Starting brainstorm session on: ${topic}`);
-      orchestrator.addUserMessage(`Let's brainstorm about: ${topic}`);
-
       for await (const event of orchestrator.brainstorm(topic)) {
         if (event.phase === 'start') {
-          terminalUI.printAgentStart(event.agent);
-        } else if (event.phase === 'chunk' && event.content) {
-          terminalUI.printChunk(event.content);
+          terminalUI.startSpinner(`${event.agent} is thinking...`);
         } else if (event.phase === 'complete') {
+          terminalUI.stopSpinner();
+          terminalUI.printAgentStart(event.agent);
+          terminalUI.printChunk(event.content || '');
           terminalUI.printComplete();
+          await askerHandler.handle(event.agent, event.content || '');
         }
       }
-
       terminalUI.printSuccess('Brainstorm session complete!');
+      await this.runImplementation();
+    } catch (error) {
+      terminalUI.stopSpinner(false);
+      terminalUI.printError(
+        error instanceof Error ? error.message : 'An unknown error occurred'
+      );
+    }
+    return true;
+  }
+
+  private async runImplementation(): Promise<boolean> {
+    terminalUI.printInfo('Starting implementation mode...');
+    try {
+      await this.chatWithAgent('architect', 'Please create a plan based on the brainstorm.');
+      await this.chatWithAgent('coder', 'Please implement the plan.');
+      await this.runReviewCycle();
     } catch (error) {
       terminalUI.printError(
         error instanceof Error ? error.message : 'An unknown error occurred'
       );
     }
-
     return true;
   }
 

@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import ora from 'ora';
-import * as readline from 'readline';
-import { select } from '@inquirer/prompts';
+import { select, editor, input } from '@inquirer/prompts';
 import { orchestrator, llmClient, type AgentType } from '../core/index.js';
 import { conversationManager } from '../core/conversation.js';
 import { configManager, PROVIDER_CONFIG, type ApiProvider } from '../config/index.js';
+import { renderer } from '../formatter/index.js';
 
 const AGENT_COLORS: Record<AgentType | 'user', (text: string) => string> = {
   coder: chalk.green,
@@ -12,6 +12,7 @@ const AGENT_COLORS: Record<AgentType | 'user', (text: string) => string> = {
   debugger: chalk.red,
   architect: chalk.blue,
   enduser: chalk.magenta,
+  asker: chalk.gray,
   user: chalk.cyan,
 };
 
@@ -21,6 +22,7 @@ const AGENT_ICONS: Record<AgentType | 'user', string> = {
   debugger: '🐛',
   architect: '🏗️',
   enduser: '👤',
+  asker: '🤖',
   user: '🧑',
 };
 
@@ -28,10 +30,9 @@ const AGENT_ICONS: Record<AgentType | 'user', string> = {
 const MODELS_PER_PAGE = 15;
 
 export class TerminalUI {
-  private rl: readline.Interface | null = null;
   private currentSpinner: ReturnType<typeof ora> | null = null;
 
-  constructor() { }
+  constructor() {}
 
   printBanner(): void {
     console.log(
@@ -95,7 +96,8 @@ export class TerminalUI {
     const color = AGENT_COLORS[agent];
     const icon = AGENT_ICONS[agent];
     const name = agent.charAt(0).toUpperCase() + agent.slice(1);
-    return `${icon} ${color(chalk.bold(`[${name}]`))}\n${content}\n`;
+    const renderedContent = renderer.render(content);
+    return `${icon} ${color(chalk.bold(`[${name}]`))}\n${renderedContent}\n`;
   }
 
   printAgentStart(agent: AgentType): void {
@@ -106,7 +108,8 @@ export class TerminalUI {
   }
 
   printChunk(content: string): void {
-    process.stdout.write(content);
+    const renderedContent = renderer.render(content);
+    process.stdout.write(renderedContent);
   }
 
   printComplete(): void {
@@ -203,29 +206,15 @@ export class TerminalUI {
   }
 
   async promptForInput(prompt = 'You'): Promise<string> {
-    if (!this.rl) {
-      this.rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
-    }
-
-    // Show styled prompt box with CWD
     this.printPromptBox();
 
-    return new Promise((resolve) => {
-      this.rl!.question(chalk.gray('│ ') + chalk.cyan(`${prompt}`) + chalk.dim(' ❯ '), (answer) => {
-        this.printPromptBoxBottom();
-        resolve(answer.trim());
-      });
+    const answer = await editor({
+      message: chalk.gray('│ ') + chalk.cyan(`${prompt}`) + chalk.dim(' ❯ '),
+      waitForUseInput: false,
     });
-  }
 
-  private createReadlineInterface(): readline.Interface {
-    return readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+    this.printPromptBoxBottom();
+    return answer.trim();
   }
 
   async runSetupWizard(): Promise<boolean> {
@@ -241,71 +230,46 @@ export class TerminalUI {
 `)
     );
 
-    const rl = this.createReadlineInterface();
-
     try {
       // Step 1: Select provider
-      console.log(chalk.bold('\n📡 Step 1: Select your AI provider\n'));
-      console.log('  ' + chalk.cyan('1)') + ' OpenAI (GPT-4, GPT-4o)');
-      console.log('  ' + chalk.cyan('2)') + ' Anthropic (Claude)');
-      console.log('  ' + chalk.cyan('3)') + ' OpenRouter (Access multiple models)');
-      console.log('  ' + chalk.cyan('4)') + ' Custom (OpenAI-compatible API)\n');
+      const providerChoice = await select({
+        message: '📡 Select your AI provider',
+        choices: [
+          { name: 'OpenAI (GPT-4, GPT-4o)', value: 'openai' },
+          { name: 'Anthropic (Claude)', value: 'anthropic' },
+          { name: 'OpenRouter (Access multiple models)', value: 'openrouter' },
+          { name: 'Custom (OpenAI-compatible API)', value: 'custom' },
+        ],
+      });
 
-      const providerChoice = await this.askQuestion(rl, 'Enter your choice (1-4): ');
-
-      const providerMap: Record<string, ApiProvider> = {
-        '1': 'openai',
-        '2': 'anthropic',
-        '3': 'openrouter',
-        '4': 'custom',
-      };
-
-      const provider = providerMap[providerChoice];
-      if (!provider) {
-        this.printError('Invalid choice. Please run setup again.');
-        rl.close();
-        return false;
-      }
-
+      const provider = providerChoice as ApiProvider;
       configManager.apiProvider = provider;
       const providerConfig = PROVIDER_CONFIG[provider];
 
       // For custom provider, ask for base URL
       if (provider === 'custom') {
-        console.log(chalk.bold('\n🔗 Enter your custom API base URL'));
-        const baseUrl = await this.askQuestion(rl, 'Base URL: ');
+        const baseUrl = await input({
+          message: '🔗 Enter your custom API base URL',
+        });
         if (baseUrl) {
           configManager.apiBaseUrl = baseUrl;
         }
       }
 
       // Step 2: Enter API key
-      console.log(chalk.bold(`\n🔑 Step 2: Enter your ${providerConfig.displayName} API key\n`));
-
-      if (provider === 'openrouter') {
-        console.log(chalk.dim('  Get your API key at: https://openrouter.ai/keys\n'));
-      } else if (provider === 'openai') {
-        console.log(chalk.dim('  Get your API key at: https://platform.openai.com/api-keys\n'));
-      } else if (provider === 'anthropic') {
-        console.log(chalk.dim('  Get your API key at: https://console.anthropic.com/\n'));
-      }
-
-      const apiKey = await this.askQuestion(rl, 'API Key: ');
-      if (!apiKey) {
-        this.printError('API key is required. Please run setup again.');
-        rl.close();
-        return false;
-      }
+      const apiKey = await input({
+        message: `🔑 Enter your ${providerConfig.displayName} API key`,
+        validate: (value) => value.length > 0 || 'API key cannot be empty.',
+      });
 
       configManager.apiKey = apiKey;
 
       // Step 3: Set default model (optional)
-      console.log(chalk.bold('\n🤖 Step 3: Choose your default model\n'));
-      console.log(chalk.dim(`  Default for ${providerConfig.displayName}: ${providerConfig.defaultModel}`));
-      console.log(chalk.dim('  Press Enter to use the default, or type a model name.\n'));
-
-      const model = await this.askQuestion(rl, `Model [${providerConfig.defaultModel}]: `);
-      configManager.model = model || providerConfig.defaultModel;
+      const model = await input({
+        message: '🤖 Choose your default model',
+        default: providerConfig.defaultModel,
+      });
+      configManager.model = model;
 
       // Mark setup as complete
       configManager.setupComplete = true;
@@ -326,21 +290,11 @@ export class TerminalUI {
 ╚═══════════════════════════════════════════════════════════════╝
 `));
 
-      rl.close();
       return true;
     } catch (error) {
-      rl.close();
       this.printError('Setup failed. Please try again.');
       return false;
     }
-  }
-
-  private askQuestion(rl: readline.Interface, question: string): Promise<string> {
-    return new Promise((resolve) => {
-      rl.question(chalk.cyan(question), (answer) => {
-        resolve(answer.trim());
-      });
-    });
   }
 
   async selectModel(): Promise<void> {
@@ -406,10 +360,7 @@ export class TerminalUI {
   }
 
   close(): void {
-    if (this.rl) {
-      this.rl.close();
-      this.rl = null;
-    }
+    // No readline interface to close anymore
   }
 }
 
