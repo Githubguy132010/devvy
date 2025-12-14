@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ora from 'ora';
-import { select, editor, input } from '@inquirer/prompts';
+import { select, editor, input, password } from '@inquirer/prompts';
 import { orchestrator, llmClient, type AgentType } from '../core/index.js';
 import { conversationManager } from '../core/conversation.js';
 import { configManager, PROVIDER_CONFIG, type ApiProvider } from '../config/index.js';
@@ -92,11 +92,11 @@ export class TerminalUI {
     );
   }
 
-  formatAgentMessage(agent: AgentType | 'user', content: string): string {
+  async formatAgentMessage(agent: AgentType | 'user', content: string): Promise<string> {
     const color = AGENT_COLORS[agent];
     const icon = AGENT_ICONS[agent];
     const name = agent.charAt(0).toUpperCase() + agent.slice(1);
-    const renderedContent = renderer.render(content);
+    const renderedContent = await renderer.render(content);
     return `${icon} ${color(chalk.bold(`[${name}]`))}\n${renderedContent}\n`;
   }
 
@@ -107,8 +107,8 @@ export class TerminalUI {
     process.stdout.write(`\n${icon} ${color(chalk.bold(`[${name}]`))}\n`);
   }
 
-  printChunk(content: string): void {
-    const renderedContent = renderer.render(content);
+  async printChunk(content: string): Promise<void> {
+    const renderedContent = await renderer.render(content);
     process.stdout.write(renderedContent);
   }
 
@@ -210,7 +210,7 @@ export class TerminalUI {
 
     const answer = await editor({
       message: chalk.gray('│ ') + chalk.cyan(`${prompt}`) + chalk.dim(' ❯ '),
-      waitForUseInput: false,
+      waitForUserInput: false,
     });
 
     this.printPromptBoxBottom();
@@ -257,26 +257,10 @@ export class TerminalUI {
       }
 
       // Step 2: Enter API key
-      console.log(chalk.bold(`\n🔑 Step 2: Enter your ${providerConfig.displayName} API key\n`));
-
-      if (provider === 'openrouter') {
-        console.log(chalk.dim('  Get your API key at: https://openrouter.ai/keys\n'));
-      } else if (provider === 'openai') {
-        console.log(chalk.dim('  Get your API key at: https://platform.openai.com/api-keys\n'));
-      } else if (provider === 'anthropic') {
-        console.log(chalk.dim('  Get your API key at: https://console.anthropic.com/\n'));
-      }
-
       const apiKey = await password({
-        message: 'API Key:',
-        mask: true,
+        message: `🔑 Enter your ${providerConfig.displayName} API key`,
+        validate: (value) => value.length > 0 || 'API key cannot be empty.',
       });
-
-      if (!apiKey) {
-        this.printError('API key is required. Please run setup again.');
-        rl.close();
-        return false;
-      }
 
       configManager.apiKey = apiKey;
 

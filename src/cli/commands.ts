@@ -125,7 +125,7 @@ export class CommandHandler {
 
       terminalUI.stopSpinner();
       terminalUI.printAgentStart(agent);
-      terminalUI.printChunk(fullContent);
+      await terminalUI.printChunk(fullContent);
       terminalUI.printComplete();
       await askerHandler.handle(agent, fullContent);
     } catch (error) {
@@ -146,7 +146,7 @@ export class CommandHandler {
         } else if (event.phase === 'complete') {
           terminalUI.stopSpinner();
           terminalUI.printAgentStart(event.agent);
-          terminalUI.printChunk(event.content || '');
+          await terminalUI.printChunk(event.content || '');
           terminalUI.printComplete();
           await askerHandler.handle(event.agent, event.content || '');
           if (event.approved) {
@@ -173,7 +173,7 @@ export class CommandHandler {
         } else if (event.phase === 'complete') {
           terminalUI.stopSpinner();
           terminalUI.printAgentStart(event.agent);
-          terminalUI.printChunk(event.content || '');
+          await terminalUI.printChunk(event.content || '');
           terminalUI.printComplete();
           await askerHandler.handle(event.agent, event.content || '');
         }
