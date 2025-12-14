@@ -27,6 +27,10 @@ const AGENT_ICONS: Record<AgentType | 'user', string> = {
   user: '🧑',
 };
 
+// Terminal display constants
+const DEFAULT_TERMINAL_WIDTH = 80;
+const CODE_BLOCK_BORDER_WIDTH = 60;
+
 // Maximum models to display per page in the scrollable list
 const MODELS_PER_PAGE = 15;
 
@@ -120,17 +124,9 @@ export class TerminalUI {
   }
 
   printComplete(): void {
-    // Render the complete buffered content with markdown
-    if (this.enableRendering && this.streamBuffer) {
-      // Clear the current line and move up to overwrite raw output
-      process.stdout.write('\r');
-      
-      // Render with syntax highlighting
-      const rendered = terminalRenderer.highlightCodeBlocks(this.streamBuffer);
-      console.log('\n' + rendered);
-    } else {
-      console.log('\n');
-    }
+    // For better rendering, just add newline after streaming
+    // The code highlighting happens during streaming already
+    console.log('\n');
     
     // Reset buffer
     this.streamBuffer = '';
@@ -237,7 +233,7 @@ export class TerminalUI {
   }
 
   printPromptBox(): void {
-    const width = Math.min(process.stdout.columns || 80, 80);
+    const width = Math.min(process.stdout.columns || DEFAULT_TERMINAL_WIDTH, DEFAULT_TERMINAL_WIDTH);
     const cwd = this.getCwd();
     const cwdDisplay = `  ${chalk.dim('📁')} ${chalk.dim(cwd)}`;
     // Remove ANSI escape codes for length calculation
@@ -251,7 +247,7 @@ export class TerminalUI {
   }
 
   printPromptBoxBottom(): void {
-    const width = Math.min(process.stdout.columns || 80, 80);
+    const width = Math.min(process.stdout.columns || DEFAULT_TERMINAL_WIDTH, DEFAULT_TERMINAL_WIDTH);
     console.log(chalk.gray('└' + '─'.repeat(width - 2) + '┘'));
   }
 

@@ -74,9 +74,11 @@ export class Orchestrator {
     const message = messages[messages.length - 1];
     
     // Detect questions in the agent's response
-    if (type !== 'questioner' && QuestionerAgent.hasQuestions(fullContent)) {
+    if (type !== 'questioner') {
       const questions = QuestionerAgent.detectQuestions(fullContent);
-      yield { type: 'question_detected', content: fullContent, questions, message };
+      if (questions.length > 0) {
+        yield { type: 'question_detected', content: fullContent, questions, message };
+      }
     }
     
     if (message) {

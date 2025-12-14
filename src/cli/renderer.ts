@@ -1,6 +1,9 @@
 import chalk from 'chalk';
 import { highlight } from 'cli-highlight';
 
+// Code block formatting constants
+const CODE_BLOCK_BORDER_WIDTH = 60;
+
 export class TerminalRenderer {
   private typingSpeed: number = 2; // chars per tick for typing effect
   private enableTypingEffect: boolean = true;
@@ -119,11 +122,12 @@ export class TerminalRenderer {
             language: lang,
             ignoreIllegals: true,
           });
-          return `\n${chalk.gray('┌─ ' + lang + ' ─' + '─'.repeat(Math.max(0, 57 - lang.length)))}\n${highlighted}\n${chalk.gray('└' + '─'.repeat(60))}\n`;
+          const langBorderLength = Math.max(0, CODE_BLOCK_BORDER_WIDTH - 3 - lang.length);
+          return `\n${chalk.gray('┌─ ' + lang + ' ─' + '─'.repeat(langBorderLength))}\n${highlighted}\n${chalk.gray('└' + '─'.repeat(CODE_BLOCK_BORDER_WIDTH))}\n`;
         }
-        return `\n${chalk.gray('┌' + '─'.repeat(60))}\n${code.trim()}\n${chalk.gray('└' + '─'.repeat(60))}\n`;
+        return `\n${chalk.gray('┌' + '─'.repeat(CODE_BLOCK_BORDER_WIDTH))}\n${code.trim()}\n${chalk.gray('└' + '─'.repeat(CODE_BLOCK_BORDER_WIDTH))}\n`;
       } catch {
-        return `\n${chalk.gray('┌' + '─'.repeat(60))}\n${code.trim()}\n${chalk.gray('└' + '─'.repeat(60))}\n`;
+        return `\n${chalk.gray('┌' + '─'.repeat(CODE_BLOCK_BORDER_WIDTH))}\n${code.trim()}\n${chalk.gray('└' + '─'.repeat(CODE_BLOCK_BORDER_WIDTH))}\n`;
       }
     });
   }
