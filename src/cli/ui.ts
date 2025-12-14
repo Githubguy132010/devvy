@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import * as readline from 'readline';
-import { select } from '@inquirer/prompts';
+import { select, password } from '@inquirer/prompts';
 import { orchestrator, llmClient, type AgentType } from '../core/index.js';
 import { conversationManager } from '../core/conversation.js';
 import { configManager, PROVIDER_CONFIG, type ApiProvider } from '../config/index.js';
@@ -290,7 +290,11 @@ export class TerminalUI {
         console.log(chalk.dim('  Get your API key at: https://console.anthropic.com/\n'));
       }
 
-      const apiKey = await this.askQuestion(rl, 'API Key: ');
+      const apiKey = await password({
+        message: 'API Key:',
+        mask: true,
+      });
+
       if (!apiKey) {
         this.printError('API key is required. Please run setup again.');
         rl.close();
