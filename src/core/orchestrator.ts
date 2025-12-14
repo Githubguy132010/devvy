@@ -8,7 +8,7 @@ import {
   type BaseAgent,
 } from '../agents/index.js';
 import { conversationManager, type AgentRole, type Message } from '../core/index.js';
-import { WordTokenizer } from 'natural';
+import natural from 'natural';
 
 export type AgentType = 'coder' | 'critic' | 'debugger' | 'architect' | 'enduser' | 'asker';
 
@@ -224,7 +224,7 @@ export class Orchestrator {
   }
 
   private detectQuestion(message: string): { isQuestion: boolean; mentionedAgent: AgentType | null } {
-    const tokenizer = new WordTokenizer();
+    const tokenizer = new natural.WordTokenizer();
     const tokens = tokenizer.tokenize(message.toLowerCase());
 
     const isQuestion = message.includes('?');
