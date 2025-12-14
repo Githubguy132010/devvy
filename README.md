@@ -10,8 +10,15 @@ A terminal-based multi-agent coding assistant where AI agents collaborate, argue
   - 🐛 **The Debugger**: Expert at finding and fixing bugs
   - 🏗️ **The Architect**: Designs system architecture and structure
   - 👤 **The End User**: Represents real user perspective, asks questions others might miss
+  - ❓ **The Questioner**: Answers questions from other agents automatically
 
 - **Collaborative Discussion**: All agents see the entire conversation and can brainstorm together
+- **Intelligent Question Detection**: Automatically detects questions from agents and routes them to the Questioner
+- **Enhanced Terminal Rendering**: 
+  - Syntax-highlighted code blocks
+  - Better markdown rendering
+  - Loading animations and visual feedback
+  - Improved prompt box display
 - **Review Cycles**: Iterative code review process where agents work together to improve code
 - **BYOK (Bring Your Own Key)**: Use your own API key with multiple providers
 
@@ -115,6 +122,7 @@ devvy
 @debugger I'm getting an error: TypeError: undefined is not a function
 @architect Design a REST API for a todo app
 @enduser What questions would a user have about this feature?
+@questioner What's the best way to handle authentication?
 ```
 
 ### Special commands

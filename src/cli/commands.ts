@@ -95,7 +95,7 @@ export class CommandHandler {
     }
 
     // Regular agent chat
-    const validAgents: AgentType[] = ['coder', 'critic', 'debugger', 'architect', 'enduser'];
+    const validAgents: AgentType[] = ['coder', 'critic', 'debugger', 'architect', 'enduser', 'questioner'];
     if (!validAgents.includes(agentName as AgentType)) {
       terminalUI.printError(
         `Unknown agent: ${agentName}. Valid agents: ${validAgents.join(', ')}`
@@ -113,13 +113,22 @@ export class CommandHandler {
 
       terminalUI.printAgentStart(agent);
 
+      let detectedQuestions: string[] = [];
+
       for await (const event of orchestrator.runAgent(agent, message)) {
         if (event.type === 'chunk') {
           terminalUI.printChunk(event.content);
+        } else if (event.type === 'question_detected') {
+          detectedQuestions = event.questions || [];
+        } else if (event.type === 'complete') {
+          terminalUI.printComplete();
+          
+          // If questions were detected, automatically call the questioner agent
+          if (detectedQuestions.length > 0) {
+            await this.handleDetectedQuestions(detectedQuestions);
+          }
         }
       }
-
-      terminalUI.printComplete();
     } catch (error) {
       terminalUI.printError(
         error instanceof Error ? error.message : 'An unknown error occurred'
@@ -127,6 +136,27 @@ export class CommandHandler {
     }
 
     return true;
+  }
+
+  private async handleDetectedQuestions(questions: string[]): Promise<void> {
+    terminalUI.printQuestionDetected(questions);
+    
+    // Show a brief thinking animation
+    await terminalUI.showThinkingAnimation(500);
+    
+    // Prepare context for the questioner
+    const questionContext = `The following questions were asked:\n${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\nPlease provide helpful answers to these questions based on the conversation context.`;
+    
+    // Call the questioner agent
+    terminalUI.printAgentStart('questioner');
+    
+    for await (const event of orchestrator.runAgent('questioner', questionContext)) {
+      if (event.type === 'chunk') {
+        terminalUI.printChunk(event.content);
+      } else if (event.type === 'complete') {
+        terminalUI.printComplete();
+      }
+    }
   }
 
   private async runReviewCycle(): Promise<boolean> {

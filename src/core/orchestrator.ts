@@ -4,11 +4,13 @@ import {
   debuggerAgent,
   architectAgent,
   endUserAgent,
+  questionerAgent,
   type BaseAgent,
 } from '../agents/index.js';
 import { conversationManager, type AgentRole, type Message } from '../core/index.js';
+import { QuestionerAgent } from '../agents/questioner.js';
 
-export type AgentType = 'coder' | 'critic' | 'debugger' | 'architect' | 'enduser';
+export type AgentType = 'coder' | 'critic' | 'debugger' | 'architect' | 'enduser' | 'questioner';
 
 export interface OrchestratorConfig {
   maxReviewCycles: number;
@@ -17,7 +19,7 @@ export interface OrchestratorConfig {
 
 const DEFAULT_CONFIG: OrchestratorConfig = {
   maxReviewCycles: 3,
-  enabledAgents: ['coder', 'critic', 'debugger', 'architect', 'enduser'],
+  enabledAgents: ['coder', 'critic', 'debugger', 'architect', 'enduser', 'questioner'],
 };
 
 export class Orchestrator {
@@ -32,6 +34,7 @@ export class Orchestrator {
       ['debugger', debuggerAgent],
       ['architect', architectAgent],
       ['enduser', endUserAgent],
+      ['questioner', questionerAgent],
     ]);
   }
 
@@ -54,7 +57,7 @@ export class Orchestrator {
   async *runAgent(
     type: AgentType,
     context?: string
-  ): AsyncGenerator<{ type: 'chunk' | 'complete'; content: string; message?: Message }> {
+  ): AsyncGenerator<{ type: 'chunk' | 'complete' | 'question_detected'; content: string; message?: Message; questions?: string[] }> {
     if (!this.isAgentEnabled(type)) {
       throw new Error(`Agent ${type} is not enabled`);
     }
@@ -69,6 +72,13 @@ export class Orchestrator {
 
     const messages = conversationManager.getMessages();
     const message = messages[messages.length - 1];
+    
+    // Detect questions in the agent's response
+    if (type !== 'questioner' && QuestionerAgent.hasQuestions(fullContent)) {
+      const questions = QuestionerAgent.detectQuestions(fullContent);
+      yield { type: 'question_detected', content: fullContent, questions, message };
+    }
+    
     if (message) {
       yield { type: 'complete', content: fullContent, message };
     }

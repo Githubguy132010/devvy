@@ -32,6 +32,7 @@
   "dependencies": {
     "@inquirer/prompts": "^8.0.2",
     "chalk": "^5.6.2",
+    "cli-highlight": "^2.1.11",
     "commander": "^14.0.2",
     "conf": "^15.0.2",
     "dotenv": "^17.2.3",

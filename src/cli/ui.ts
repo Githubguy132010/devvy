@@ -5,6 +5,7 @@ import { select } from '@inquirer/prompts';
 import { orchestrator, llmClient, type AgentType } from '../core/index.js';
 import { conversationManager } from '../core/conversation.js';
 import { configManager, PROVIDER_CONFIG, type ApiProvider } from '../config/index.js';
+import { terminalRenderer } from './renderer.js';
 
 const AGENT_COLORS: Record<AgentType | 'user', (text: string) => string> = {
   coder: chalk.green,
@@ -12,6 +13,7 @@ const AGENT_COLORS: Record<AgentType | 'user', (text: string) => string> = {
   debugger: chalk.red,
   architect: chalk.blue,
   enduser: chalk.magenta,
+  questioner: chalk.cyan,
   user: chalk.cyan,
 };
 
@@ -21,6 +23,7 @@ const AGENT_ICONS: Record<AgentType | 'user', string> = {
   debugger: '🐛',
   architect: '🏗️',
   enduser: '👤',
+  questioner: '❓',
   user: '🧑',
 };
 
@@ -30,6 +33,8 @@ const MODELS_PER_PAGE = 15;
 export class TerminalUI {
   private rl: readline.Interface | null = null;
   private currentSpinner: ReturnType<typeof ora> | null = null;
+  private streamBuffer: string = '';
+  private enableRendering: boolean = true;
 
   constructor() { }
 
@@ -68,6 +73,8 @@ export class TerminalUI {
       ' - Ask the Architect agent\n' +
       chalk.cyan('@enduser <message>') +
       '   - Ask the End User agent\n' +
+      chalk.cyan('@questioner <message>') +
+      ' - Ask the Questioner agent\n' +
       chalk.cyan('@review') +
       '              - Start a review cycle\n' +
       chalk.cyan('@brainstorm <topic>') +
@@ -87,7 +94,8 @@ export class TerminalUI {
       '                - Exit Devvy\n' +
       chalk.gray('─'.repeat(50)) +
       '\n' +
-      chalk.dim('Or just type a message to chat with the default agent (Coder)\n')
+      chalk.dim('Or just type a message to chat with the default agent (Coder)\n') +
+      chalk.dim('\n💡 Tip: Agents automatically detect and answer questions from other agents!\n')
     );
   }
 
@@ -106,11 +114,26 @@ export class TerminalUI {
   }
 
   printChunk(content: string): void {
+    this.streamBuffer += content;
+    // During streaming, show raw content for real-time feedback
     process.stdout.write(content);
   }
 
   printComplete(): void {
-    console.log('\n');
+    // Render the complete buffered content with markdown
+    if (this.enableRendering && this.streamBuffer) {
+      // Clear the current line and move up to overwrite raw output
+      process.stdout.write('\r');
+      
+      // Render with syntax highlighting
+      const rendered = terminalRenderer.highlightCodeBlocks(this.streamBuffer);
+      console.log('\n' + rendered);
+    } else {
+      console.log('\n');
+    }
+    
+    // Reset buffer
+    this.streamBuffer = '';
   }
 
   startSpinner(text: string): void {
@@ -144,6 +167,33 @@ export class TerminalUI {
 
   printInfo(message: string): void {
     console.log(chalk.blue(`\nℹ️  ${message}\n`));
+  }
+
+  printQuestionDetected(questions: string[]): void {
+    console.log(chalk.yellow('\n❓ Questions detected:'));
+    questions.forEach((q, i) => {
+      console.log(chalk.yellow(`   ${i + 1}. ${q}`));
+    });
+    console.log(chalk.blue('   → Automatically asking the Questioner agent...\n'));
+  }
+
+  async showThinkingAnimation(durationMs: number = 1000): Promise<void> {
+    const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+    let i = 0;
+    const startTime = Date.now();
+    
+    return new Promise((resolve) => {
+      const interval = setInterval(() => {
+        process.stdout.write(`\r${chalk.cyan(frames[i])} ${chalk.dim('Thinking...')}`);
+        i = (i + 1) % frames.length;
+        
+        if (Date.now() - startTime >= durationMs) {
+          clearInterval(interval);
+          process.stdout.write('\r' + ' '.repeat(20) + '\r'); // Clear the line
+          resolve();
+        }
+      }, 80);
+    });
   }
 
   printConversationHistory(): void {
@@ -187,18 +237,21 @@ export class TerminalUI {
   }
 
   printPromptBox(): void {
-    const width = Math.min(process.stdout.columns || 80, 76);
+    const width = Math.min(process.stdout.columns || 80, 80);
     const cwd = this.getCwd();
-    const cwdLine = `  ${chalk.dim('📁')} ${chalk.dim(cwd)}`;
+    const cwdDisplay = `  ${chalk.dim('📁')} ${chalk.dim(cwd)}`;
+    // Remove ANSI escape codes for length calculation
+    const cwdLength = cwd.length + 5; // 5 for "  📁 "
+    const padding = Math.max(0, width - cwdLength - 2);
 
     console.log('');
     console.log(chalk.gray('┌' + '─'.repeat(width - 2) + '┐'));
-    console.log(chalk.gray('│') + cwdLine + ' '.repeat(Math.max(0, width - 4 - cwd.length)) + chalk.gray('│'));
+    console.log(chalk.gray('│') + cwdDisplay + ' '.repeat(padding) + chalk.gray('│'));
     console.log(chalk.gray('├' + '─'.repeat(width - 2) + '┤'));
   }
 
   printPromptBoxBottom(): void {
-    const width = Math.min(process.stdout.columns || 80, 76);
+    const width = Math.min(process.stdout.columns || 80, 80);
     console.log(chalk.gray('└' + '─'.repeat(width - 2) + '┘'));
   }
 
