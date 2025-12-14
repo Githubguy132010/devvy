@@ -257,10 +257,26 @@ export class TerminalUI {
       }
 
       // Step 2: Enter API key
-      const apiKey = await input({
-        message: `🔑 Enter your ${providerConfig.displayName} API key`,
-        validate: (value) => value.length > 0 || 'API key cannot be empty.',
+      console.log(chalk.bold(`\n🔑 Step 2: Enter your ${providerConfig.displayName} API key\n`));
+
+      if (provider === 'openrouter') {
+        console.log(chalk.dim('  Get your API key at: https://openrouter.ai/keys\n'));
+      } else if (provider === 'openai') {
+        console.log(chalk.dim('  Get your API key at: https://platform.openai.com/api-keys\n'));
+      } else if (provider === 'anthropic') {
+        console.log(chalk.dim('  Get your API key at: https://console.anthropic.com/\n'));
+      }
+
+      const apiKey = await password({
+        message: 'API Key:',
+        mask: true,
       });
+
+      if (!apiKey) {
+        this.printError('API key is required. Please run setup again.');
+        rl.close();
+        return false;
+      }
 
       configManager.apiKey = apiKey;
 
