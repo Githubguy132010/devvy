@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Devvy is a terminal-based multi-agent coding assistant where AI agents collaborate, argue, and brainstorm together to help users code. The project is built with TypeScript and uses Node.js (v18+) with Bun as the runtime.
+Devvy is a terminal-based multi-agent coding assistant where AI agents collaborate, argue, and brainstorm together to help users code. The project is built with TypeScript and uses Bun as the runtime (Node.js v18+ also supported).
 
 ## Architecture
 
@@ -107,8 +107,8 @@ export const myAgent = new MyAgent();
 
 ## Dependencies and Package Management
 
-- **Runtime**: Node.js >=18.0.0, Bun supported
-- **Package Manager**: npm (bun.lock exists but npm is primary)
+- **Runtime**: Bun (Node.js >=18.0.0 also supported)
+- **Package Manager**: Bun (uses bun.lock)
 - **Key Dependencies**:
   - `openai`: LLM API client
   - `commander`: CLI framework
@@ -121,11 +121,11 @@ export const myAgent = new MyAgent();
 ## Build and Test Commands
 
 ```bash
-npm run build    # Compile TypeScript to dist/
-npm run dev      # Run with bun directly from src/
-npm run start    # Run compiled version
-npm run test     # Run tests with bun
-npm run lint     # Type check without emitting files
+bun run build    # Compile TypeScript to dist/
+bun run dev      # Run directly from src/
+bun run start    # Run compiled version
+bun run test     # Run tests with bun
+bun run lint     # Type check without emitting files
 ```
 
 ## Configuration
