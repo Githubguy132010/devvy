@@ -20,7 +20,7 @@ export interface OrchestratorConfig {
 
 const DEFAULT_CONFIG: OrchestratorConfig = {
   maxReviewCycles: 3,
-  enabledAgents: ['coder', 'critic', 'debugger', 'architect', 'enduser'],
+  enabledAgents: ['coder', 'critic', 'debugger', 'architect', 'enduser', 'asker'],
   maxDepth: 10,
 };
 
