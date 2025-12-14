@@ -60,17 +60,25 @@ Please provide a helpful answer based on the conversation context and reasonable
   static detectQuestions(text: string): string[] {
     const questions: string[] = [];
     
-    // Split by common sentence endings
-    const sentences = text.split(/[.!]\s+/);
+    // First, split by question marks to catch explicit questions
+    const questionMarkParts = text.split('?');
+    for (let i = 0; i < questionMarkParts.length - 1; i++) {
+      const part = questionMarkParts[i].trim();
+      // Get the last sentence before the question mark
+      const sentences = part.split(/[.!]\s+/);
+      const question = sentences[sentences.length - 1].trim();
+      if (question) {
+        questions.push(question + '?');
+      }
+    }
+    
+    // Then check remaining text for implicit questions (without question marks)
+    const lastPart = questionMarkParts[questionMarkParts.length - 1];
+    const sentences = lastPart.split(/[.!]\s+/);
     
     for (const sentence of sentences) {
       const trimmed = sentence.trim();
-      
-      // Check for question marks
-      if (trimmed.includes('?')) {
-        questions.push(trimmed);
-        continue;
-      }
+      if (!trimmed) continue;
       
       // Check for common question patterns (without question marks)
       const questionPatterns = [
