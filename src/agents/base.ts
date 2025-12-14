@@ -7,13 +7,17 @@ export interface AgentConfig {
   systemPrompt: string;
   temperature?: number;
   useTools?: boolean;
+  enabledTools?: string[];
 }
 
 export abstract class BaseAgent {
   protected config: AgentConfig;
+  public implementationMode = false;
+  private enabledTools: string[] | undefined;
 
   constructor(config: AgentConfig) {
     this.config = config;
+    this.enabledTools = config.enabledTools;
   }
 
   get name(): string {
@@ -22,6 +26,10 @@ export abstract class BaseAgent {
 
   get role(): AgentRole {
     return this.config.role;
+  }
+
+  setEnabledTools(tools: string[] | undefined): void {
+    this.enabledTools = tools;
   }
 
   protected buildMessages(userMessage?: string): LLMMessage[] {
@@ -57,6 +65,7 @@ export abstract class BaseAgent {
     const response = await llmClient.chat(messages, {
       temperature: this.config.temperature,
       tools: this.config.useTools,
+      enabledTools: this.enabledTools,
     });
 
     const message = conversationManager.addMessage(this.role, response.content);
@@ -79,6 +88,7 @@ export abstract class BaseAgent {
       for await (const chunk of llmClient.streamChat(messages, {
         temperature: this.config.temperature,
         tools: useTools,
+        enabledTools: this.enabledTools,
       })) {
         if (typeof chunk === 'string') {
           fullResponse += chunk;
@@ -91,6 +101,19 @@ export abstract class BaseAgent {
       // If no tool calls, we're done
       if (pendingToolCalls.length === 0) {
         break;
+      }
+
+      // Check for implementation mode signal
+      const implementationSignal = pendingToolCalls.find(
+        (call) => call.function.name === 'signal_implementation_mode'
+      );
+
+      if (implementationSignal) {
+        this.implementationMode = true;
+        // Remove the signal from the pending calls
+        pendingToolCalls = pendingToolCalls.filter(
+          (call) => call.function.name !== 'signal_implementation_mode'
+        );
       }
 
       // Execute tool calls

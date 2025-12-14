@@ -95,7 +95,7 @@ export class CommandHandler {
     }
 
     // Regular agent chat
-    const validAgents: AgentType[] = ['coder', 'critic', 'debugger', 'architect', 'enduser'];
+    const validAgents: AgentType[] = ['coder', 'critic', 'debugger', 'architect', 'enduser', 'asker'];
     if (!validAgents.includes(agentName as AgentType)) {
       terminalUI.printError(
         `Unknown agent: ${agentName}. Valid agents: ${validAgents.join(', ')}`
@@ -112,15 +112,26 @@ export class CommandHandler {
       orchestrator.addUserMessage(message);
 
       terminalUI.printAgentStart(agent);
+      terminalUI.startSpinner('Thinking...');
+      let firstChunk = true;
 
       for await (const event of orchestrator.runAgent(agent, message)) {
         if (event.type === 'chunk') {
+          if (firstChunk) {
+            terminalUI.stopSpinner();
+            firstChunk = false;
+          }
           terminalUI.printChunk(event.content);
         }
       }
 
+      if (firstChunk) {
+        // If no chunks were received, stop the spinner
+        terminalUI.stopSpinner();
+      }
       terminalUI.printComplete();
     } catch (error) {
+      terminalUI.stopSpinner(false);
       terminalUI.printError(
         error instanceof Error ? error.message : 'An unknown error occurred'
       );
@@ -132,13 +143,23 @@ export class CommandHandler {
   private async runReviewCycle(): Promise<boolean> {
     try {
       terminalUI.printInfo('Starting review cycle...');
+      let firstChunk = true;
 
       for await (const event of orchestrator.runReviewCycle()) {
         if (event.phase === 'start') {
           terminalUI.printAgentStart(event.agent);
+          terminalUI.startSpinner('Thinking...');
+          firstChunk = true;
         } else if (event.phase === 'chunk' && event.content) {
+          if (firstChunk) {
+            terminalUI.stopSpinner();
+            firstChunk = false;
+          }
           terminalUI.printChunk(event.content);
         } else if (event.phase === 'complete') {
+          if (firstChunk) {
+            terminalUI.stopSpinner();
+          }
           terminalUI.printComplete();
 
           if (event.approved) {
@@ -147,6 +168,7 @@ export class CommandHandler {
         }
       }
     } catch (error) {
+      terminalUI.stopSpinner(false);
       terminalUI.printError(
         error instanceof Error ? error.message : 'An unknown error occurred'
       );
@@ -159,19 +181,32 @@ export class CommandHandler {
     try {
       terminalUI.printInfo(`Starting brainstorm session on: ${topic}`);
       orchestrator.addUserMessage(`Let's brainstorm about: ${topic}`);
+      let firstChunk = true;
 
       for await (const event of orchestrator.brainstorm(topic)) {
         if (event.phase === 'start') {
           terminalUI.printAgentStart(event.agent);
+          terminalUI.startSpinner('Thinking...');
+          firstChunk = true;
         } else if (event.phase === 'chunk' && event.content) {
+          if (firstChunk) {
+            terminalUI.stopSpinner();
+            firstChunk = false;
+          }
           terminalUI.printChunk(event.content);
         } else if (event.phase === 'complete') {
+          if (firstChunk) {
+            terminalUI.stopSpinner();
+          }
           terminalUI.printComplete();
+        } else if (event.phase === 'implementation') {
+          terminalUI.printInfo('Switching to implementation mode...');
         }
       }
 
       terminalUI.printSuccess('Brainstorm session complete!');
     } catch (error) {
+      terminalUI.stopSpinner(false);
       terminalUI.printError(
         error instanceof Error ? error.message : 'An unknown error occurred'
       );

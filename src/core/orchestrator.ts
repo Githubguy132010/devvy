@@ -4,20 +4,24 @@ import {
   debuggerAgent,
   architectAgent,
   endUserAgent,
+  askerAgent,
   type BaseAgent,
 } from '../agents/index.js';
 import { conversationManager, type AgentRole, type Message } from '../core/index.js';
+import { WordTokenizer } from 'natural';
 
-export type AgentType = 'coder' | 'critic' | 'debugger' | 'architect' | 'enduser';
+export type AgentType = 'coder' | 'critic' | 'debugger' | 'architect' | 'enduser' | 'asker';
 
 export interface OrchestratorConfig {
   maxReviewCycles: number;
   enabledAgents: AgentType[];
+  maxDepth: number;
 }
 
 const DEFAULT_CONFIG: OrchestratorConfig = {
   maxReviewCycles: 3,
   enabledAgents: ['coder', 'critic', 'debugger', 'architect', 'enduser'],
+  maxDepth: 10,
 };
 
 export class Orchestrator {
@@ -32,6 +36,7 @@ export class Orchestrator {
       ['debugger', debuggerAgent],
       ['architect', architectAgent],
       ['enduser', endUserAgent],
+      ['asker', askerAgent],
     ]);
   }
 
@@ -53,8 +58,13 @@ export class Orchestrator {
 
   async *runAgent(
     type: AgentType,
-    context?: string
+    context?: string,
+    depth = 0
   ): AsyncGenerator<{ type: 'chunk' | 'complete'; content: string; message?: Message }> {
+    if (depth > this.config.maxDepth) {
+      throw new Error(`Maximum agent recursion depth (${this.config.maxDepth}) reached.`);
+    }
+
     if (!this.isAgentEnabled(type)) {
       throw new Error(`Agent ${type} is not enabled`);
     }
@@ -65,6 +75,12 @@ export class Orchestrator {
     for await (const chunk of agent.respondStream(context)) {
       fullContent += chunk;
       yield { type: 'chunk', content: chunk };
+    }
+
+    const { isQuestion, mentionedAgent } = this.detectQuestion(fullContent);
+
+    if (isQuestion) {
+      yield* this.handleQuestion(type, fullContent, mentionedAgent, depth + 1);
     }
 
     const messages = conversationManager.getMessages();
@@ -128,7 +144,8 @@ export class Orchestrator {
         yield { agent: 'coder', phase: 'start' };
         for await (const event of this.runAgent(
           'coder',
-          'Please address the feedback from the Critic and update the code.'
+          'Please address the feedback from the Critic and update the code.',
+          1
         )) {
           if (event.type === 'chunk') {
             yield { agent: 'coder', phase: 'chunk', content: event.content };
@@ -142,13 +159,17 @@ export class Orchestrator {
 
   async *brainstorm(topic: string): AsyncGenerator<{
     agent: AgentType;
-    phase: 'start' | 'chunk' | 'complete';
+    phase: 'start' | 'chunk' | 'complete' | 'implementation';
     content?: string;
   }> {
     const order: AgentType[] = ['architect', 'coder', 'critic', 'enduser'];
+    const readOnlyTools = ['read_file', 'list_files'];
 
     for (const agentType of order) {
       if (!this.isAgentEnabled(agentType)) continue;
+
+      const agent = this.getAgent(agentType);
+      agent.setEnabledTools(readOnlyTools);
 
       yield { agent: agentType, phase: 'start' };
 
@@ -157,12 +178,39 @@ export class Orchestrator {
           ? `Let's brainstorm about: ${topic}\n\nProvide your architectural perspective.`
           : `Continue the brainstorm about: ${topic}\n\nAdd your perspective considering what others have said.`;
 
-      for await (const event of this.runAgent(agentType, prompt)) {
+      let fullContent = '';
+      for await (const event of this.runAgent(agentType, prompt, 1)) {
         if (event.type === 'chunk') {
+          fullContent += event.content;
           yield { agent: agentType, phase: 'chunk', content: event.content };
         } else {
           yield { agent: agentType, phase: 'complete', content: event.content };
         }
+      }
+
+      if (this.getAgent(agentType).implementationMode) {
+        yield { agent: 'coder', phase: 'implementation' };
+        yield* this.implementation();
+        return;
+      }
+    }
+  }
+
+  async *implementation(): AsyncGenerator<{
+    agent: AgentType;
+    phase: 'start' | 'chunk' | 'complete';
+    content?: string;
+  }> {
+    // For now, just a simple implementation cycle with the coder agent
+    const coder = this.getAgent('coder');
+    coder.setEnabledTools(undefined);
+
+    yield { agent: 'coder', phase: 'start' };
+    for await (const event of this.runAgent('coder', 'Please implement the plan.', 1)) {
+      if (event.type === 'chunk') {
+        yield { agent: 'coder', phase: 'chunk', content: event.content };
+      } else {
+        yield { agent: 'coder', phase: 'complete', content: event.content };
       }
     }
   }
@@ -173,6 +221,31 @@ export class Orchestrator {
 
   clearConversation(): void {
     conversationManager.clear();
+  }
+
+  private detectQuestion(message: string): { isQuestion: boolean; mentionedAgent: AgentType | null } {
+    const tokenizer = new WordTokenizer();
+    const tokens = tokenizer.tokenize(message.toLowerCase());
+
+    const isQuestion = message.includes('?');
+
+    if (!isQuestion) {
+      return { isQuestion: false, mentionedAgent: null };
+    }
+
+    const mentionedAgent = tokens.find(token => this.agents.has(token as AgentType)) as AgentType | null;
+
+    return { isQuestion, mentionedAgent };
+  }
+
+  private async *handleQuestion(
+    originalAgent: AgentType,
+    question: string,
+    mentionedAgent: AgentType | null,
+    depth: number
+  ): AsyncGenerator<{ type: 'chunk' | 'complete'; content: string; message?: Message }> {
+    const targetAgent = mentionedAgent || 'asker';
+    yield* this.runAgent(targetAgent, question, depth);
   }
 }
 

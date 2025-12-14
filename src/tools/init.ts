@@ -5,6 +5,7 @@ import { writeFileTool } from './write-file.js';
 import { editFileTool } from './edit-file.js';
 import { readFileTool } from './read-file.js';
 import { listFilesTool } from './list-files.js';
+import { signalImplementationModeTool } from './signal-implementation-mode.js';
 
 export function initializeTools(): void {
     toolRegistry.register(bashTool);
@@ -12,6 +13,7 @@ export function initializeTools(): void {
     toolRegistry.register(editFileTool);
     toolRegistry.register(readFileTool);
     toolRegistry.register(listFilesTool);
+  toolRegistry.register(signalImplementationModeTool);
 }
 
 // Auto-initialize on import

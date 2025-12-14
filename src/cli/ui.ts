@@ -1,7 +1,11 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import * as readline from 'readline';
-import { select, password } from '@inquirer/prompts';
+import { select, password, input } from '@inquirer/prompts';
+import { marked } from 'marked';
+import { markedTerminal } from 'marked-terminal';
+import { markedHighlight } from 'marked-highlight';
+import hljs from 'highlight.js';
 import { orchestrator, llmClient, type AgentType } from '../core/index.js';
 import { conversationManager } from '../core/conversation.js';
 import { configManager, PROVIDER_CONFIG, type ApiProvider } from '../config/index.js';
@@ -12,6 +16,7 @@ const AGENT_COLORS: Record<AgentType | 'user', (text: string) => string> = {
   debugger: chalk.red,
   architect: chalk.blue,
   enduser: chalk.magenta,
+  asker: chalk.gray,
   user: chalk.cyan,
 };
 
@@ -21,6 +26,7 @@ const AGENT_ICONS: Record<AgentType | 'user', string> = {
   debugger: '🐛',
   architect: '🏗️',
   enduser: '👤',
+  asker: '❓',
   user: '🧑',
 };
 
@@ -30,8 +36,21 @@ const MODELS_PER_PAGE = 15;
 export class TerminalUI {
   private rl: readline.Interface | null = null;
   private currentSpinner: ReturnType<typeof ora> | null = null;
+  private fullResponse: string = '';
 
-  constructor() { }
+  constructor() {
+    marked.use(
+      markedHighlight({
+        langPrefix: 'hljs language-',
+        highlight(code, lang) {
+          const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+          return hljs.highlight(code, { language }).value;
+        },
+      })
+    );
+
+    marked.use(markedTerminal());
+  }
 
   printBanner(): void {
     console.log(
@@ -68,6 +87,8 @@ export class TerminalUI {
       ' - Ask the Architect agent\n' +
       chalk.cyan('@enduser <message>') +
       '   - Ask the End User agent\n' +
+      chalk.cyan('@asker <message>') +
+      '     - Ask the Asker agent\n' +
       chalk.cyan('@review') +
       '              - Start a review cycle\n' +
       chalk.cyan('@brainstorm <topic>') +
@@ -91,26 +112,25 @@ export class TerminalUI {
     );
   }
 
-  formatAgentMessage(agent: AgentType | 'user', content: string): string {
-    const color = AGENT_COLORS[agent];
-    const icon = AGENT_ICONS[agent];
-    const name = agent.charAt(0).toUpperCase() + agent.slice(1);
-    return `${icon} ${color(chalk.bold(`[${name}]`))}\n${content}\n`;
-  }
-
   printAgentStart(agent: AgentType): void {
     const color = AGENT_COLORS[agent];
     const icon = AGENT_ICONS[agent];
     const name = agent.charAt(0).toUpperCase() + agent.slice(1);
+    this.fullResponse = '';
     process.stdout.write(`\n${icon} ${color(chalk.bold(`[${name}]`))}\n`);
   }
 
   printChunk(content: string): void {
-    process.stdout.write(content);
+    this.fullResponse += content;
+    // Optional: live rendering (can be choppy)
+    // process.stdout.clearLine(0);
+    // process.stdout.cursorTo(0);
+    // process.stdout.write(marked(this.fullResponse));
   }
 
   printComplete(): void {
-    console.log('\n');
+    console.log(marked(this.fullResponse));
+    this.fullResponse = '';
   }
 
   startSpinner(text: string): void {
@@ -186,39 +206,12 @@ export class TerminalUI {
     return cwd.replace(home, '~');
   }
 
-  printPromptBox(): void {
-    const width = Math.min(process.stdout.columns || 80, 76);
+  async promptForInput(): Promise<string> {
     const cwd = this.getCwd();
-    const cwdLine = `  ${chalk.dim('📁')} ${chalk.dim(cwd)}`;
-
-    console.log('');
-    console.log(chalk.gray('┌' + '─'.repeat(width - 2) + '┐'));
-    console.log(chalk.gray('│') + cwdLine + ' '.repeat(Math.max(0, width - 4 - cwd.length)) + chalk.gray('│'));
-    console.log(chalk.gray('├' + '─'.repeat(width - 2) + '┤'));
-  }
-
-  printPromptBoxBottom(): void {
-    const width = Math.min(process.stdout.columns || 80, 76);
-    console.log(chalk.gray('└' + '─'.repeat(width - 2) + '┘'));
-  }
-
-  async promptForInput(prompt = 'You'): Promise<string> {
-    if (!this.rl) {
-      this.rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
-    }
-
-    // Show styled prompt box with CWD
-    this.printPromptBox();
-
-    return new Promise((resolve) => {
-      this.rl!.question(chalk.gray('│ ') + chalk.cyan(`${prompt}`) + chalk.dim(' ❯ '), (answer) => {
-        this.printPromptBoxBottom();
-        resolve(answer.trim());
-      });
+    const answer = await input({
+      message: `\n ${chalk.dim('📁')} ${chalk.dim(cwd)}\n ${chalk.cyan('You')} ${chalk.dim('›')}`,
     });
+    return answer.trim();
   }
 
   private createReadlineInterface(): readline.Interface {

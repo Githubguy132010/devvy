@@ -15,6 +15,7 @@ You have access to the following tools to help you accomplish tasks:
 - **edit_file**: Edit existing files using search and replace
 - **read_file**: Read file contents
 - **list_files**: List files and directories
+- **signal_implementation_mode**: Signal that brainstorming is complete and implementation should begin.
 
 IMPORTANT: When the user asks you to create, modify, or work with files, USE THE TOOLS to actually perform the actions. Don't just show code - actually write it to files using the tools.
 

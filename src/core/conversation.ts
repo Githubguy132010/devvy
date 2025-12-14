@@ -1,4 +1,4 @@
-export type AgentRole = 'coder' | 'critic' | 'debugger' | 'architect' | 'enduser' | 'user';
+export type AgentRole = 'coder' | 'critic' | 'debugger' | 'architect' | 'enduser' | 'user' | 'asker';
 
 export interface Message {
   id: string;

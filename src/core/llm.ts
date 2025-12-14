@@ -38,6 +38,7 @@ export interface ModelInfo {
 export interface ChatOptions {
   temperature?: number;
   tools?: boolean;
+  enabledTools?: string[];
 }
 
 export class LLMClient {
@@ -126,8 +127,11 @@ export class LLMClient {
     const client = this.getClient();
     const model = configManager.model;
 
+    const allTools = toolRegistry.toOpenAITools() as any;
     const tools: ChatCompletionTool[] | undefined = options?.tools
-      ? toolRegistry.toOpenAITools() as ChatCompletionTool[]
+      ? options.enabledTools
+        ? allTools.filter((t: any) => options.enabledTools?.includes(t.function.name))
+        : allTools
       : undefined;
 
     const response = await client.chat.completions.create({
@@ -218,8 +222,11 @@ export class LLMClient {
     const client = this.getClient();
     const model = configManager.model;
 
+    const allTools = toolRegistry.toOpenAITools() as any;
     const tools: ChatCompletionTool[] | undefined = options?.tools
-      ? toolRegistry.toOpenAITools() as ChatCompletionTool[]
+      ? options.enabledTools
+        ? allTools.filter((t: any) => options.enabledTools?.includes(t.function.name))
+        : allTools
       : undefined;
 
     const stream = await client.chat.completions.create({
