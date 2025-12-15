@@ -12,6 +12,7 @@ const AGENT_COLORS: Record<AgentType | 'user', (text: string) => string> = {
   debugger: chalk.red,
   architect: chalk.blue,
   enduser: chalk.magenta,
+  creative: chalk.cyanBright,
   user: chalk.cyan,
 };
 
@@ -21,6 +22,7 @@ const AGENT_ICONS: Record<AgentType | 'user', string> = {
   debugger: '🐛',
   architect: '🏗️',
   enduser: '👤',
+  creative: '💡',
   user: '🧑',
 };
 
@@ -68,6 +70,8 @@ export class TerminalUI {
       ' - Ask the Architect agent\n' +
       chalk.cyan('@enduser <message>') +
       '   - Ask the End User agent\n' +
+      chalk.cyan('@creative <message>') +
+      '  - Ask the Creative agent\n' +
       chalk.cyan('@review') +
       '              - Start a review cycle\n' +
       chalk.cyan('@brainstorm <topic>') +

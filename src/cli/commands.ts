@@ -95,7 +95,14 @@ export class CommandHandler {
     }
 
     // Regular agent chat
-    const validAgents: AgentType[] = ['coder', 'critic', 'debugger', 'architect', 'enduser'];
+    const validAgents: AgentType[] = [
+      'coder',
+      'critic',
+      'debugger',
+      'architect',
+      'enduser',
+      'creative',
+    ];
     if (!validAgents.includes(agentName as AgentType)) {
       terminalUI.printError(
         `Unknown agent: ${agentName}. Valid agents: ${validAgents.join(', ')}`

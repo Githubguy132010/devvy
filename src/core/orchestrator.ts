@@ -4,11 +4,12 @@ import {
   debuggerAgent,
   architectAgent,
   endUserAgent,
+  creativeAgent,
   type BaseAgent,
 } from '../agents/index.js';
 import { conversationManager, type AgentRole, type Message } from '../core/index.js';
 
-export type AgentType = 'coder' | 'critic' | 'debugger' | 'architect' | 'enduser';
+export type AgentType = 'coder' | 'critic' | 'debugger' | 'architect' | 'enduser' | 'creative';
 
 export interface OrchestratorConfig {
   maxReviewCycles: number;
@@ -17,7 +18,7 @@ export interface OrchestratorConfig {
 
 const DEFAULT_CONFIG: OrchestratorConfig = {
   maxReviewCycles: 3,
-  enabledAgents: ['coder', 'critic', 'debugger', 'architect', 'enduser'],
+  enabledAgents: ['coder', 'critic', 'debugger', 'architect', 'enduser', 'creative'],
 };
 
 export class Orchestrator {
@@ -32,6 +33,7 @@ export class Orchestrator {
       ['debugger', debuggerAgent],
       ['architect', architectAgent],
       ['enduser', endUserAgent],
+      ['creative', creativeAgent],
     ]);
   }
 
@@ -145,7 +147,7 @@ export class Orchestrator {
     phase: 'start' | 'chunk' | 'complete';
     content?: string;
   }> {
-    const order: AgentType[] = ['architect', 'coder', 'critic', 'enduser'];
+    const order: AgentType[] = ['architect', 'creative', 'coder', 'critic', 'enduser'];
 
     for (const agentType of order) {
       if (!this.isAgentEnabled(agentType)) continue;
