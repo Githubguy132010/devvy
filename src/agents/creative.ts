@@ -1,6 +1,6 @@
 import { BaseAgent } from './base.js';
 
-class CreativeAgent extends BaseAgent {
+export class CreativeAgent extends BaseAgent {
   constructor() {
     super({
       name: 'Creative',
