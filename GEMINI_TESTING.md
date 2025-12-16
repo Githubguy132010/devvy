@@ -73,10 +73,14 @@ Type in the interactive session:
 /model
 ```
 
-This should show available Gemini models including:
+This will fetch and display all available Gemini models dynamically from the API, including:
 - gemini-2.0-flash-exp
 - gemini-1.5-pro
 - gemini-1.5-flash
+- gemini-exp-1206
+- And other available models
+
+Note: The model list is fetched dynamically from Google's API, so available models may change over time.
 
 ### 4. Test Tool Calling
 

@@ -206,13 +206,37 @@ export class LLMClient {
 
     try {
       if (provider === 'gemini') {
-        const client = this.getGeminiClient();
-        const models: ModelInfo[] = [
-          { id: 'gemini-2.0-flash-exp', owned_by: 'google' },
-          { id: 'gemini-1.5-pro', owned_by: 'google' },
-          { id: 'gemini-1.5-flash', owned_by: 'google' },
-        ];
+        const apiKey = configManager.apiKey;
+        if (!apiKey) {
+          throw new Error('API key not configured');
+        }
+
+        // Fetch models from Gemini REST API
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch models: ${response.statusText}`);
+        }
+
+        const data = await response.json() as { models?: Array<{ name: string; supportedGenerationMethods?: string[] }> };
         
+        if (!data.models) {
+          throw new Error('Invalid response from Gemini API');
+        }
+
+        // Filter for models that support generateContent
+        const models: ModelInfo[] = data.models
+          .filter(model => 
+            model.supportedGenerationMethods?.includes('generateContent')
+          )
+          .map(model => ({
+            id: model.name.replace('models/', ''),
+            owned_by: 'google',
+          }))
+          .sort((a, b) => a.id.localeCompare(b.id));
+
         return models;
       } else {
         const client = this.getOpenAIClient();
