@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
 import { GoogleGenerativeAI, SchemaType, type Content, type Part, type FunctionDeclaration, type Tool as GeminiTool } from '@google/generative-ai';
+import { randomUUID } from 'crypto';
 import { configManager } from '../config/index.js';
 import { toolRegistry, type ToolResult } from '../tools/index.js';
 import { toolSpinner } from '../cli/spinner.js';
@@ -114,11 +115,21 @@ export class LLMClient {
         }
       } else if (msg.role === 'tool') {
         // Tool responses in Gemini
+        // Extract function name from tool_call_id (format: gemini_functionName_uuid)
+        // If not in expected format, use the tool_call_id as-is
+        let functionName = msg.tool_call_id || 'unknown';
+        if (functionName.startsWith('gemini_') && functionName.includes('_')) {
+          const parts = functionName.split('_');
+          if (parts.length >= 3) {
+            functionName = parts.slice(1, -1).join('_'); // Extract function name between prefix and uuid
+          }
+        }
+        
         contents.push({
           role: 'function',
           parts: [{
             functionResponse: {
-              name: msg.tool_call_id || 'unknown',
+              name: functionName,
               response: {
                 result: msg.content || '',
               },
@@ -260,10 +271,10 @@ export class LLMClient {
       // Check for function calls
       const functionCalls = candidate.content.parts.filter(part => 'functionCall' in part);
       if (functionCalls.length > 0) {
-        const toolCalls: ToolCall[] = functionCalls.map((part, index) => {
+        const toolCalls: ToolCall[] = functionCalls.map((part) => {
           const fc = (part as { functionCall: { name: string; args: Record<string, unknown> } }).functionCall;
           return {
-            id: `call_${index}_${Date.now()}`,
+            id: `gemini_${fc.name}_${randomUUID()}`,
             type: 'function' as const,
             function: {
               name: fc.name,
@@ -441,8 +452,8 @@ export class LLMClient {
 
       // If we collected function calls, yield them at the end
       if (functionCalls.length > 0) {
-        const toolCalls: ToolCall[] = functionCalls.map((fc, index) => ({
-          id: `call_${index}_${Date.now()}`,
+        const toolCalls: ToolCall[] = functionCalls.map((fc) => ({
+          id: `gemini_${fc.name}_${randomUUID()}`,
           type: 'function' as const,
           function: {
             name: fc.name,
