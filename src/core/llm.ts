@@ -211,31 +211,46 @@ export class LLMClient {
           throw new Error('API key not configured');
         }
 
-        // Fetch models from Gemini REST API
+        // Fetch models from Gemini REST API using Authorization header for security
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+          'https://generativelanguage.googleapis.com/v1beta/models',
+          {
+            headers: {
+              'x-goog-api-key': apiKey,
+            },
+          }
         );
 
         if (!response.ok) {
           throw new Error(`Failed to fetch models: ${response.statusText}`);
         }
 
-        const data = await response.json() as { models?: Array<{ name: string; supportedGenerationMethods?: string[] }> };
+        const data = await response.json() as unknown;
         
-        if (!data.models) {
+        // Validate response structure
+        if (!data || typeof data !== 'object' || !('models' in data) || !Array.isArray((data as { models: unknown }).models)) {
           throw new Error('Invalid response from Gemini API');
         }
 
+        const responseData = data as { models: unknown[] };
+
         // Filter for models that support generateContent
-        const models: ModelInfo[] = data.models
-          .filter(model => 
-            model.supportedGenerationMethods?.includes('generateContent')
-          )
-          .map(model => ({
+        const models: ModelInfo[] = responseData.models
+          .filter((model): model is { name: string; supportedGenerationMethods?: string[] } => {
+            if (!model || typeof model !== 'object') return false;
+            const m = model as Record<string, unknown>;
+            // Include models that explicitly support generateContent, or have no methods listed
+            const methods = m.supportedGenerationMethods;
+            return (
+              typeof m.name === 'string' &&
+              (!Array.isArray(methods) || methods.includes('generateContent'))
+            );
+          })
+          .map((model: { name: string; supportedGenerationMethods?: string[] }) => ({
             id: model.name.replace('models/', ''),
             owned_by: 'google',
           }))
-          .sort((a, b) => a.id.localeCompare(b.id));
+          .sort((a: ModelInfo, b: ModelInfo) => a.id.localeCompare(b.id));
 
         return models;
       } else {
