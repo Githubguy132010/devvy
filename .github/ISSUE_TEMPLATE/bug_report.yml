@@ -90,7 +90,7 @@ body:
     attributes:
       label: Model
       description: Which model are you using?
-      placeholder: "e.g., gpt-4o, claude-3-5-sonnet-20241022, etc."
+      placeholder: "e.g., gpt-4o, claude-3-5-sonnet-20241220, etc."
 
   - type: input
     id: version

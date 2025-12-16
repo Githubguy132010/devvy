@@ -71,7 +71,8 @@ body:
       placeholder: |
         Example usage:
         ```
-        devvy> @newagent help me with...
+        devvy> @coder help me with...
+        devvy> /newcommand to enable...
         ```
       render: markdown
 

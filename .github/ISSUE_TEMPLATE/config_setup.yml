@@ -91,9 +91,9 @@ body:
       label: Environment Variables
       description: Are you using environment variables for API keys?
       options:
-        - "Yes"
-        - "No"
-        - "Not sure"
+        - Yes
+        - No
+        - Not sure
     validations:
       required: true
 
@@ -121,7 +121,7 @@ body:
     attributes:
       label: Runtime Version
       description: Version of Bun/Node.js
-      placeholder: "e.g., Bun 1.0.0, Node.js 18.0.0"
+      placeholder: "e.g., Bun 1.2.0, Node.js 22.0.0"
     validations:
       required: true
 

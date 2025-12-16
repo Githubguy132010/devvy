@@ -95,10 +95,10 @@ body:
       label: Tool Usage
       description: Should this agent use tools (bash, file operations, etc.)?
       options:
-        - "Yes - Full tool access"
-        - "Yes - Limited tool access"
-        - "No - Conversational only"
-        - "Not sure"
+        - Yes - Full tool access
+        - Yes - Limited tool access
+        - No - Conversational only
+        - Not sure
     validations:
       required: true
 
