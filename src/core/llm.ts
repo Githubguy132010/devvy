@@ -287,20 +287,46 @@ export class LLMClient {
       
       const geminiTools = tools ? this.convertToolsToGemini(tools) : undefined;
       
-      const generativeModel = client.getGenerativeModel({
-        model,
-        systemInstruction,
-        tools: geminiTools,
-      });
+      let result;
+      let response;
+      let fallbackUsed = false;
+      
+      try {
+        const generativeModel = client.getGenerativeModel({
+          model,
+          systemInstruction,
+          tools: geminiTools,
+        });
 
-      const result = await generativeModel.generateContent({
-        contents,
-        generationConfig: {
-          temperature: options?.temperature ?? 0.7,
-        },
-      });
+        result = await generativeModel.generateContent({
+          contents,
+          generationConfig: {
+            temperature: options?.temperature ?? 0.7,
+          },
+        });
+        response = result.response;
+      } catch (error) {
+        // If the configured model fails, try fallback to default model
+        if (model !== configManager.getProviderConfig('gemini').defaultModel) {
+          fallbackUsed = true;
+          const fallbackModel = configManager.getProviderConfig('gemini').defaultModel;
+          const generativeModel = client.getGenerativeModel({
+            model: fallbackModel,
+            systemInstruction,
+            tools: geminiTools,
+          });
 
-      const response = result.response;
+          result = await generativeModel.generateContent({
+            contents,
+            generationConfig: {
+              temperature: options?.temperature ?? 0.7,
+            },
+          });
+          response = result.response;
+        } else {
+          throw error;
+        }
+      }
       const candidate = response.candidates?.[0];
       
       if (!candidate) {
@@ -458,18 +484,41 @@ export class LLMClient {
       
       const geminiTools = tools ? this.convertToolsToGemini(tools) : undefined;
       
-      const generativeModel = client.getGenerativeModel({
-        model,
-        systemInstruction,
-        tools: geminiTools,
-      });
+      let result;
+      
+      try {
+        const generativeModel = client.getGenerativeModel({
+          model,
+          systemInstruction,
+          tools: geminiTools,
+        });
 
-      const result = await generativeModel.generateContentStream({
-        contents,
-        generationConfig: {
-          temperature: options?.temperature ?? 0.7,
-        },
-      });
+        result = await generativeModel.generateContentStream({
+          contents,
+          generationConfig: {
+            temperature: options?.temperature ?? 0.7,
+          },
+        });
+      } catch (error) {
+        // If the configured model fails, try fallback to default model
+        if (model !== configManager.getProviderConfig('gemini').defaultModel) {
+          const fallbackModel = configManager.getProviderConfig('gemini').defaultModel;
+          const generativeModel = client.getGenerativeModel({
+            model: fallbackModel,
+            systemInstruction,
+            tools: geminiTools,
+          });
+
+          result = await generativeModel.generateContentStream({
+            contents,
+            generationConfig: {
+              temperature: options?.temperature ?? 0.7,
+            },
+          });
+        } else {
+          throw error;
+        }
+      }
 
       const functionCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
 
