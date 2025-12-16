@@ -55,7 +55,7 @@ devvy setup
 - **OpenAI** - GPT-4, GPT-4o, GPT-4-turbo
 - **Anthropic** - Claude 3.5, Claude 3
 - **OpenRouter** - Access to 100+ models from various providers
-- **Google Gemini** - Dynamic model list fetched from API (includes Gemini 2.0, Gemini 1.5 Pro, and more)
+- **Google Gemini** - Includes Gemini 3 Pro Preview, etc.
 - **Custom** - Any OpenAI-compatible API endpoint
 
 ## Configuration

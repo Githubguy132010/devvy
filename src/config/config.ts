@@ -37,7 +37,7 @@ export const PROVIDER_CONFIG: Record<ApiProvider, { baseUrl?: string; defaultMod
     displayName: 'OpenRouter',
   },
   gemini: {
-    defaultModel: 'gemini-2.0-flash-exp',
+    defaultModel: 'gemini-3-pro-preview',
     envVar: 'GEMINI_API_KEY',
     displayName: 'Google Gemini',
   },
