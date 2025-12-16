@@ -222,15 +222,6 @@ command here
 - [ ] Content is scannable with headings
 - [ ] Code examples have proper syntax highlighting
 
-## SEO & Discoverability
-
-<!-- If relevant for public documentation -->
-
-- [ ] Key terms are included naturally
-- [ ] Headings are descriptive
-- [ ] Content is well-structured
-- [ ] Examples cover common search queries
-
 ## Localization Considerations
 
 <!-- If this affects or enables translations -->
