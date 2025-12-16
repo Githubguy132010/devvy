@@ -250,15 +250,17 @@ export class TerminalUI {
       console.log('  ' + chalk.cyan('1)') + ' OpenAI (GPT-4, GPT-4o)');
       console.log('  ' + chalk.cyan('2)') + ' Anthropic (Claude)');
       console.log('  ' + chalk.cyan('3)') + ' OpenRouter (Access multiple models)');
-      console.log('  ' + chalk.cyan('4)') + ' Custom (OpenAI-compatible API)\n');
+      console.log('  ' + chalk.cyan('4)') + ' Google Gemini (Gemini 2.0)');
+      console.log('  ' + chalk.cyan('5)') + ' Custom (OpenAI-compatible API)\n');
 
-      const providerChoice = await this.askQuestion(rl, 'Enter your choice (1-4): ');
+      const providerChoice = await this.askQuestion(rl, 'Enter your choice (1-5): ');
 
       const providerMap: Record<string, ApiProvider> = {
         '1': 'openai',
         '2': 'anthropic',
         '3': 'openrouter',
-        '4': 'custom',
+        '4': 'gemini',
+        '5': 'custom',
       };
 
       const provider = providerMap[providerChoice];
@@ -289,6 +291,8 @@ export class TerminalUI {
         console.log(chalk.dim('  Get your API key at: https://platform.openai.com/api-keys\n'));
       } else if (provider === 'anthropic') {
         console.log(chalk.dim('  Get your API key at: https://console.anthropic.com/\n'));
+      } else if (provider === 'gemini') {
+        console.log(chalk.dim('  Get your API key at: https://aistudio.google.com/apikey\n'));
       }
 
       const apiKey = await password({

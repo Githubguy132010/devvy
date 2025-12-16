@@ -1,7 +1,7 @@
 import Conf from 'conf';
 import * as readline from 'readline';
 
-export type ApiProvider = 'openai' | 'anthropic' | 'openrouter' | 'custom';
+export type ApiProvider = 'openai' | 'anthropic' | 'openrouter' | 'gemini' | 'custom';
 
 interface DevvyConfig {
   apiKey?: string;
@@ -35,6 +35,11 @@ export const PROVIDER_CONFIG: Record<ApiProvider, { baseUrl?: string; defaultMod
     defaultModel: 'anthropic/claude-3.5-sonnet',
     envVar: 'OPENROUTER_API_KEY',
     displayName: 'OpenRouter',
+  },
+  gemini: {
+    defaultModel: 'gemini-2.0-flash-exp',
+    envVar: 'GEMINI_API_KEY',
+    displayName: 'Google Gemini',
   },
   custom: {
     defaultModel: 'gpt-4o',
