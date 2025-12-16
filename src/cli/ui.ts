@@ -54,41 +54,42 @@ export class TerminalUI {
   }
 
   printHelp(): void {
-    console.log(
-      chalk.bold('\nAvailable Commands:\n') +
-      chalk.gray('─'.repeat(50)) +
-      '\n' +
-      chalk.cyan('@coder <message>') +
-      '     - Ask the Coder agent\n' +
-      chalk.cyan('@critic <message>') +
-      '    - Ask the Critic agent\n' +
-      chalk.cyan('@debugger <message>') +
-      '  - Ask the Debugger agent\n' +
-      chalk.cyan('@architect <message>') +
-      ' - Ask the Architect agent\n' +
-      chalk.cyan('@enduser <message>') +
-      '   - Ask the End User agent\n' +
-      chalk.cyan('@review') +
-      '              - Start a review cycle\n' +
-      chalk.cyan('@brainstorm <topic>') +
-      '  - All agents brainstorm together\n' +
-      '\n' +
-      chalk.cyan('/model') +
-      '               - Select AI model (scrollable list)\n' +
-      chalk.cyan('/config') +
-      '              - Show current configuration\n' +
-      chalk.cyan('/clear') +
-      '               - Clear conversation history\n' +
-      chalk.cyan('/history') +
-      '             - Show conversation history\n' +
-      chalk.cyan('/help') +
-      '                - Show this help message\n' +
-      chalk.cyan('/exit') +
-      '                - Exit Devvy\n' +
-      chalk.gray('─'.repeat(50)) +
-      '\n' +
-      chalk.dim('Or just type a message to chat with the default agent (Coder)\n')
-    );
+    const commands = [
+      { icon: AGENT_ICONS.coder, cmd: '@coder <message>', desc: 'Ask the Coder agent' },
+      { icon: AGENT_ICONS.critic, cmd: '@critic <message>', desc: 'Ask the Critic agent' },
+      { icon: AGENT_ICONS.debugger, cmd: '@debugger <message>', desc: 'Ask the Debugger agent' },
+      { icon: AGENT_ICONS.architect, cmd: '@architect <message>', desc: 'Ask the Architect agent' },
+      { icon: AGENT_ICONS.enduser, cmd: '@enduser <message>', desc: 'Ask the End User agent' },
+      { icon: '🤝', cmd: '@review', desc: 'Start a review cycle' },
+      { icon: '💡', cmd: '@brainstorm <topic>', desc: 'All agents brainstorm together' },
+    ];
+
+    const systemCmds = [
+      { icon: '🤖', cmd: '/model', desc: 'Select AI model (scrollable list)' },
+      { icon: '⚙️', cmd: '/config', desc: 'Show current configuration' },
+      { icon: '🧹', cmd: '/clear', desc: 'Clear conversation history' },
+      { icon: '📜', cmd: '/history', desc: 'Show conversation history' },
+      { icon: '❓', cmd: '/help', desc: 'Show this help message' },
+      { icon: '👋', cmd: '/exit', desc: 'Exit Devvy' },
+    ];
+
+    let helpText = chalk.bold('\nAvailable Commands:\n') + chalk.gray('─'.repeat(50)) + '\n';
+
+    const formatCommand = (icon: string, cmd: string, desc: string, pad: number) =>
+      `  ${icon}  ${chalk.cyan(cmd.padEnd(pad))} - ${desc}\n`;
+
+    const agentCmdPad = Math.max(...commands.map(c => c.cmd.length)) + 2;
+    commands.forEach(c => helpText += formatCommand(c.icon, c.cmd, c.desc, agentCmdPad));
+
+    helpText += '\n';
+
+    const sysCmdPad = Math.max(...systemCmds.map(c => c.cmd.length)) + 2;
+    systemCmds.forEach(c => helpText += formatCommand(c.icon, c.cmd, c.desc, sysCmdPad));
+
+    helpText += chalk.gray('─'.repeat(50)) + '\n';
+    helpText += chalk.dim('Or just type a message to chat with the default agent (Coder)\n');
+
+    console.log(helpText);
   }
 
   formatAgentMessage(agent: AgentType | 'user', content: string): string {
