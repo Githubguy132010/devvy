@@ -23,13 +23,13 @@ git clone https://github.com/Githubguy132010/devvy.git
 cd devvy
 
 # Install dependencies
-npm install
+bun install
 
 # Build the project
-npm run build
+bun run build
 
 # Link globally (optional)
-npm link
+bun link
 ```
 
 ## Quick Start
