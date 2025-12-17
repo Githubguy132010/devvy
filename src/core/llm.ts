@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
-import { configManager } from '../config/index.js';
+import { configManager, PROVIDER_CONFIG, type ApiProvider } from '../config/index.js';
 import { toolRegistry, type ToolResult } from '../tools/index.js';
 import { toolSpinner } from '../cli/spinner.js';
 
@@ -119,6 +119,24 @@ export class LLMClient {
       return models.sort((a, b) => a.id.localeCompare(b.id));
     } catch (error) {
       throw new Error(`Failed to fetch models: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async validateApiKey(apiKey: string, provider: ApiProvider, baseUrl?: string): Promise<boolean> {
+    try {
+      const tempClient = new OpenAI({
+        apiKey,
+        baseURL: baseUrl || PROVIDER_CONFIG[provider]?.baseURL,
+      });
+
+      // Make a lightweight API call to validate the key (listing models with a limit of 1)
+      const models = await tempClient.models.list({ limit: 1 });
+
+      // If the call succeeds, the key is valid
+      return true;
+    } catch (error) {
+      // If the call fails, the key is invalid
+      return false;
     }
   }
 

@@ -291,18 +291,42 @@ export class TerminalUI {
         console.log(chalk.dim('  Get your API key at: https://console.anthropic.com/\n'));
       }
 
-      const apiKey = await password({
-        message: 'API Key:',
-        mask: true,
-      });
+      // Step 2: Enter and validate API key
+      console.log(chalk.bold(`\n🔑 Step 2: Enter your ${providerConfig.displayName} API key\n`));
 
-      if (!apiKey) {
-        this.printError('API key is required. Please run setup again.');
-        rl.close();
-        return false;
+      if (provider === 'openrouter') {
+        console.log(chalk.dim('  Get your API key at: https://openrouter.ai/keys\n'));
+      } else if (provider === 'openai') {
+        console.log(chalk.dim('  Get your API key at: https://platform.openai.com/api-keys\n'));
+      } else if (provider === 'anthropic') {
+        console.log(chalk.dim('  Get your API key at: https://console.anthropic.com/\n'));
       }
 
-      configManager.apiKey = apiKey;
+      let apiKey = '';
+      let isValid = false;
+
+      while (!isValid) {
+        apiKey = await password({
+          message: 'API Key:',
+          mask: true,
+        });
+
+        if (!apiKey) {
+          this.printError('API key is required. Please run setup again.');
+          rl.close();
+          return false;
+        }
+
+        const spinner = ora('Validating API key...').start();
+        isValid = await llmClient.validateApiKey(apiKey, provider, configManager.apiBaseUrl);
+
+        if (isValid) {
+          spinner.succeed('API key is valid');
+          configManager.apiKey = apiKey;
+        } else {
+          spinner.fail('Invalid API key. Please try again.');
+        }
+      }
 
       // Step 3: Set default model (optional)
       console.log(chalk.bold('\n🤖 Step 3: Choose your default model\n'));
