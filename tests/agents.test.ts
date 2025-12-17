@@ -68,13 +68,6 @@ describe('BaseAgent', () => {
     ]);
   });
 
-  it('should respond', async () => {
-    const agent = new TestAgent(config);
-    const response = await agent.respond('Test context');
-    expect(response.content).toBe('Test response');
-    expect(llmClient.chat).toHaveBeenCalled();
-  });
-
   it('should respond stream', async () => {
     const agent = new TestAgent(config);
     const stream = agent.respondStream('Test context');

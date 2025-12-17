@@ -227,7 +227,7 @@ export class LLMClient {
       messages: this.formatMessages(messages),
       temperature: options?.temperature ?? 0.7,
       stream: true,
-      tools,
+      tools: options?.tools ? toolRegistry.toOpenAITools() as ChatCompletionTool[] : undefined,
     });
 
     const toolCalls: Map<number, ToolCall> = new Map();

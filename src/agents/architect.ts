@@ -50,13 +50,6 @@ export class ArchitectAgent extends BaseAgent {
 
 Consider the requirements, constraints, and provide a clear technical design that the team can implement.`;
   }
-
-  async design(requirements: string): Promise<string> {
-    const response = await this.respond(
-      `Requirements: ${requirements}\n\nPlease provide an architectural design and implementation plan.`
-    );
-    return response.content;
-  }
 }
 
 export const architectAgent = new ArchitectAgent();

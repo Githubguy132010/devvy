@@ -48,13 +48,6 @@ export class DebuggerAgent extends BaseAgent {
 
 Analyze the problem systematically, identify potential causes, and suggest specific fixes.`;
   }
-
-  async diagnose(errorInfo: string): Promise<string> {
-    const response = await this.respond(
-      `Error/Bug Report: ${errorInfo}\n\nPlease analyze this issue and help identify the root cause.`
-    );
-    return response.content;
-  }
 }
 
 export const debuggerAgent = new DebuggerAgent();

@@ -1,5 +1,6 @@
 import { llmClient, type LLMMessage, type ToolCall } from '../core/llm.js';
 import { conversationManager, type AgentRole, type Message } from '../core/conversation.js';
+import { toolRegistry } from '../tools/index.js';
 
 export interface AgentConfig {
   name: string;
@@ -32,7 +33,6 @@ export abstract class BaseAgent {
       },
     ];
 
-    // Add conversation context
     const contextMessages = conversationManager.getMessages();
     for (const msg of contextMessages) {
       messages.push({
@@ -41,7 +41,6 @@ export abstract class BaseAgent {
       });
     }
 
-    // Add current user message if provided
     if (userMessage) {
       messages.push({
         role: 'user',
@@ -52,23 +51,11 @@ export abstract class BaseAgent {
     return messages;
   }
 
-  async respond(context?: string): Promise<Message> {
-    const messages = this.buildMessages(context);
-    const response = await llmClient.chat(messages, {
-      temperature: this.config.temperature,
-      tools: this.config.useTools,
-    });
-
-    const message = conversationManager.addMessage(this.role, response.content);
-    return message;
-  }
-
   async *respondStream(context?: string): AsyncGenerator<string, void, unknown> {
     const messages: LLMMessage[] = this.buildMessages(context);
     let fullResponse = '';
     const useTools = this.config.useTools ?? true;
 
-    // Tool call loop - keep calling until we get a text response
     let iteration = 0;
     const maxIterations = 10;
 
@@ -88,32 +75,25 @@ export abstract class BaseAgent {
         }
       }
 
-      // If no tool calls, we're done
       if (pendingToolCalls.length === 0) {
         break;
       }
 
-      // Execute tool calls
       const toolResults = await llmClient.executeToolCalls(pendingToolCalls);
 
-      // Add assistant message with tool calls to conversation
       messages.push({
         role: 'assistant',
         content: null,
         tool_calls: pendingToolCalls,
       });
 
-      // Add tool results to messages
       for (const { toolCallId, result } of toolResults) {
         messages.push({
           role: 'tool',
-          content: result.success
-            ? result.output || 'Success'
-            : `Error: ${result.error}`,
+          content: result.success ? result.output || 'Success' : `Error: ${result.error}`,
           tool_call_id: toolCallId,
         });
 
-        // Yield tool output as part of the stream
         yield `\n\n📎 **Tool output:**\n\`\`\`\n${result.success ? result.output : result.error}\n\`\`\`\n\n`;
       }
     }
@@ -125,4 +105,3 @@ export abstract class BaseAgent {
 
   abstract getSpecializedPrompt(task: string): string;
 }
-

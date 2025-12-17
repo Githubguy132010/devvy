@@ -48,14 +48,6 @@ export class EndUserAgent extends BaseAgent {
 
 Consider usability, real-world scenarios, and things the technical team might have missed.`;
   }
-
-  async evaluate(context?: string): Promise<string> {
-    const response = await this.respond(
-      context ||
-      'Looking at our conversation so far, what questions or concerns might a real user have? What are we missing?'
-    );
-    return response.content;
-  }
 }
 
 export const endUserAgent = new EndUserAgent();

@@ -2,6 +2,13 @@
 
 This file provides guidance to agents when working with code in this repository.
 
+## Pre-Submission Checks
+
+Before submitting any changes, you **must** perform the following checks:
+
+1.  **Run Tests**: Execute `bun test` to run the test suite. All tests must pass.
+2.  **Run Build**: Execute `bun run build` to ensure the project compiles without errors.
+
 ## Non-Obvious Project-Specific Information
 
 - **ESM Imports**: All imports must use `.js` extensions (required for Node.js ESM compatibility)

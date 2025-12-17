@@ -54,22 +54,6 @@ export class CriticAgent extends BaseAgent {
 
 Provide a detailed review covering correctness, security, performance, and maintainability. Be specific about any issues and suggest fixes.`;
   }
-
-  async review(codeContext?: string): Promise<{ approved: boolean; feedback: string }> {
-    const response = await this.respond(
-      codeContext || 'Please review the latest code in our conversation.'
-    );
-
-    const approved =
-      response.content.toLowerCase().includes('approved') &&
-      !response.content.toLowerCase().includes('needs changes') &&
-      !response.content.toLowerCase().includes('needs discussion');
-
-    return {
-      approved,
-      feedback: response.content,
-    };
-  }
 }
 
 export const criticAgent = new CriticAgent();
