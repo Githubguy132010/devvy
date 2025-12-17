@@ -1,6 +1,5 @@
 import { llmClient, type LLMMessage, type ToolCall } from '../core/llm.js';
-import { conversationManager, type AgentRole, type Message } from '../core/conversation.js';
-import { toolRegistry } from '../tools/index.js';
+import { conversationManager, type AgentRole } from '../core/conversation.js';
 
 export interface AgentConfig {
   name: string;
