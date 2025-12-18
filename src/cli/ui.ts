@@ -73,16 +73,18 @@ export class TerminalUI {
       { icon: '👋', cmd: '/exit', desc: 'Exit Devvy' },
     ];
 
-    let helpText = chalk.bold('\nAvailable Commands:\n') + chalk.gray('─'.repeat(50)) + '\n';
+    let helpText = chalk.bold('\nAvailable Commands:\n');
 
     const formatCommand = (icon: string, cmd: string, desc: string, pad: number) =>
       `  ${icon}  ${chalk.cyan(cmd.padEnd(pad))} - ${desc}\n`;
 
+    // Agent Commands
+    helpText += chalk.bold.underline('\nAgent Commands') + '\n';
     const agentCmdPad = Math.max(...commands.map(c => c.cmd.length)) + 2;
     commands.forEach(c => helpText += formatCommand(c.icon, c.cmd, c.desc, agentCmdPad));
 
-    helpText += '\n';
-
+    // System Commands
+    helpText += chalk.bold.underline('\nSystem Commands') + '\n';
     const sysCmdPad = Math.max(...systemCmds.map(c => c.cmd.length)) + 2;
     systemCmds.forEach(c => helpText += formatCommand(c.icon, c.cmd, c.desc, sysCmdPad));
 
