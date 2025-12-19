@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import { BaseTool, type ToolResult } from './base.js';
+import { validateBashCommand, requireValid } from '../core/validation.js';
 
 export class BashTool extends BaseTool {
     readonly name = 'bash';
@@ -28,36 +29,97 @@ export class BashTool extends BaseTool {
         const cwd = (args.cwd as string) || process.cwd();
         const timeout = (args.timeout as number) || 30000;
 
+        // Input validation and security checks
+        const validation = validateBashCommand(command);
+        if (!validation.isValid) {
+            return {
+                success: false,
+                error: validation.errors.join(', '),
+            };
+        }
+
         return new Promise((resolve) => {
             let stdout = '';
             let stderr = '';
             let killed = false;
+            let child: ReturnType<typeof spawn> | null = null;
 
-            const child = spawn('bash', ['-c', command], {
-                cwd,
-                env: process.env,
-            });
+            try {
+                child = spawn('bash', ['-c', command], {
+                    cwd,
+                    env: { ...process.env, PATH: process.env.PATH },
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                    detached: false,
+                });
+            } catch (error) {
+                resolve({
+                    success: false,
+                    error: `Failed to spawn command: ${error instanceof Error ? error.message : String(error)}`,
+                });
+                return;
+            }
 
             const timer = setTimeout(() => {
+                if (!child) return;
+                
                 killed = true;
-                child.kill('SIGTERM');
+                try {
+                    // Try graceful termination first
+                    child.kill('SIGTERM');
+                    
+                    // Force kill after 5 seconds
+                    setTimeout(() => {
+                        if (child && !child.killed) {
+                            child.kill('SIGKILL');
+                        }
+                    }, 5000);
+                } catch (error) {
+                    // Ignore kill errors
+                }
             }, timeout);
 
-            child.stdout.on('data', (data) => {
-                stdout += data.toString();
-            });
-
-            child.stderr.on('data', (data) => {
-                stderr += data.toString();
-            });
-
-            child.on('close', (code) => {
+            const cleanup = () => {
                 clearTimeout(timer);
+                child?.removeAllListeners();
+            };
+
+            child.stdout?.on('data', (data) => {
+                stdout += data.toString();
+                // Limit output size to prevent memory issues
+                if (stdout.length > 1000000) { // 1MB limit
+                    child?.kill('SIGTERM');
+                    cleanup();
+                    resolve({
+                        success: false,
+                        error: 'Output too large (>1MB)',
+                        output: stdout,
+                    });
+                }
+            });
+
+            child.stderr?.on('data', (data) => {
+                stderr += data.toString();
+                // Limit stderr size as well
+                if (stderr.length > 1000000) {
+                    child?.kill('SIGTERM');
+                    cleanup();
+                    resolve({
+                        success: false,
+                        error: 'Error output too large (>1MB)',
+                        output: stdout + stderr,
+                    });
+                }
+            });
+
+            child.on('close', (code, signal) => {
+                cleanup();
 
                 if (killed) {
                     resolve({
                         success: false,
-                        error: `Command timed out after ${timeout}ms`,
+                        error: signal === 'SIGTERM' 
+                            ? `Command timed out after ${timeout}ms`
+                            : `Command killed with signal ${signal}`,
                         output: stdout + stderr,
                     });
                     return;
@@ -78,7 +140,7 @@ export class BashTool extends BaseTool {
             });
 
             child.on('error', (error) => {
-                clearTimeout(timer);
+                cleanup();
                 resolve({
                     success: false,
                     error: error.message,

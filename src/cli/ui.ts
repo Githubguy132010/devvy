@@ -32,6 +32,7 @@ const MODELS_PER_PAGE = 15;
 export class TerminalUI {
   private rl: readline.Interface | null = null;
   private currentSpinner: ReturnType<typeof ora> | null = null;
+  private isClosed = false;
 
   constructor() { }
 
@@ -111,7 +112,19 @@ export class TerminalUI {
   }
 
   printChunk(content: string): void {
-    process.stdout.write(content);
+    if (this.isClosed) return;
+    
+    try {
+      process.stdout.write(content);
+    } catch (error) {
+      // Handle broken pipe errors gracefully
+      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'EPIPE') {
+        logger.warn('Output stream broken (EPIPE), stopping output');
+        this.close();
+        return;
+      }
+      logger.error('Error writing to stdout', { error: error instanceof Error ? error.message : String(error) });
+    }
   }
 
   printComplete(): void {
@@ -119,16 +132,33 @@ export class TerminalUI {
   }
 
   startSpinner(text: string): void {
-    this.currentSpinner = ora(text).start();
+    if (this.isClosed) return;
+    
+    // Stop any existing spinner first
+    if (this.currentSpinner) {
+      this.currentSpinner.stop();
+    }
+    
+    try {
+      this.currentSpinner = ora(text).start();
+    } catch (error) {
+      logger.error('Error starting spinner', { error: error instanceof Error ? error.message : String(error) });
+      this.currentSpinner = null;
+    }
   }
 
   stopSpinner(success = true, text?: string): void {
-    if (this.currentSpinner) {
+    if (!this.currentSpinner) return;
+    
+    try {
       if (success) {
         this.currentSpinner.succeed(text);
       } else {
         this.currentSpinner.fail(text);
       }
+    } catch (error) {
+      logger.error('Error stopping spinner', { error: error instanceof Error ? error.message : String(error) });
+    } finally {
       this.currentSpinner = null;
     }
   }
@@ -208,20 +238,46 @@ export class TerminalUI {
   }
 
   async promptForInput(prompt = 'You'): Promise<string> {
+    if (this.isClosed) {
+      throw new Error('TerminalUI is closed');
+    }
+    
     if (!this.rl) {
       this.rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
+      });
+      
+      // Handle readline interface errors
+      this.rl.on('error', (error) => {
+        logger.error('Readline interface error', { error: error.message });
       });
     }
 
     // Show styled prompt box with CWD
     this.printPromptBox();
 
-    return new Promise((resolve) => {
-      this.rl!.question(chalk.gray('│ ') + chalk.cyan(`${prompt}`) + chalk.dim(' ❯ '), (answer) => {
-        this.printPromptBoxBottom();
-        resolve(answer.trim());
+    return new Promise((resolve, reject) => {
+      if (!this.rl) {
+        reject(new Error('Readline interface not available'));
+        return;
+      }
+      
+      const timeout = setTimeout(() => {
+        reject(new Error('Prompt timeout'));
+      }, 300000); // 5 minute timeout
+      
+      this.rl.question(chalk.gray('│ ') + chalk.cyan(`${prompt}`) + chalk.dim(' ❯ '), (answer) => {
+        clearTimeout(timeout);
+        if (!this.isClosed) {
+          this.printPromptBoxBottom();
+          resolve(answer.trim());
+        }
+      });
+      
+      this.rl.on('close', () => {
+        clearTimeout(timeout);
+        reject(new Error('Readline interface closed'));
       });
     });
   }
@@ -425,9 +481,26 @@ export class TerminalUI {
   }
 
   close(): void {
+    if (this.isClosed) return;
+    
+    this.isClosed = true;
+    
+    // Stop any running spinner
+    if (this.currentSpinner) {
+      this.currentSpinner.stop();
+      this.currentSpinner = null;
+    }
+    
+    // Close readline interface
     if (this.rl) {
+      this.rl.removeAllListeners();
       this.rl.close();
       this.rl = null;
+    }
+    
+    // Clear any ongoing prompts
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode?.(false);
     }
   }
 }
