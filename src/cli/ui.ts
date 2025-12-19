@@ -73,16 +73,18 @@ export class TerminalUI {
       { icon: '👋', cmd: '/exit', desc: 'Exit Devvy' },
     ];
 
-    let helpText = chalk.bold('\nAvailable Commands:\n') + chalk.gray('─'.repeat(50)) + '\n';
+    let helpText = chalk.bold('\nAvailable Commands:\n');
 
     const formatCommand = (icon: string, cmd: string, desc: string, pad: number) =>
       `  ${icon}  ${chalk.cyan(cmd.padEnd(pad))} - ${desc}\n`;
 
+    // Agent Commands
+    helpText += chalk.bold.underline('\nAgent Commands') + '\n';
     const agentCmdPad = Math.max(...commands.map(c => c.cmd.length)) + 2;
     commands.forEach(c => helpText += formatCommand(c.icon, c.cmd, c.desc, agentCmdPad));
 
-    helpText += '\n';
-
+    // System Commands
+    helpText += chalk.bold.underline('\nSystem Commands') + '\n';
     const sysCmdPad = Math.max(...systemCmds.map(c => c.cmd.length)) + 2;
     systemCmds.forEach(c => helpText += formatCommand(c.icon, c.cmd, c.desc, sysCmdPad));
 
@@ -370,14 +372,20 @@ export class TerminalUI {
       console.log(chalk.dim('  💡 Tip: Type part of the model name to filter the list\n'));
 
       // Build choices for the select prompt
-      const choices = models.map((model) => ({
-        name: model.owned_by ? `${model.id} ${chalk.dim(`(${model.owned_by})`)}` : model.id,
-        value: model.id,
-      }));
+      const currentModel = configManager.model;
+      const choices = models.map((model) => {
+        const isCurrent = model.id === currentModel;
+        const ownerInfo = model.owned_by ? ` ${chalk.dim(`(${model.owned_by})`)}` : '';
+        const currentIndicator = isCurrent ? chalk.yellow(' (current)') : '';
+        return {
+          name: `${model.id}${ownerInfo}${currentIndicator}`,
+          value: model.id,
+        };
+      });
 
       // Add option to keep current model at the top
       choices.unshift({
-        name: chalk.yellow(`Keep current: ${configManager.model}`),
+        name: chalk.yellow(`Keep current: ${currentModel}`),
         value: '__KEEP_CURRENT__',
       });
 
