@@ -31,9 +31,9 @@ jobs:
       
     - name: Check for conventional commits
       run: |
-        # Get commit messages from the PR
-        commits=$(git log --format=%s origin/main..HEAD)
-        echo "Commits in this PR:"
+        # Get commit messages from the PR, excluding merge commits
+        commits=$(git log --format=%s --no-merges origin/main..HEAD)
+        echo "Commits in this PR (excluding merges):"
         echo "$commits"
         
         # Check if commits follow conventional commit format
