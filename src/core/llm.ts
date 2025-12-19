@@ -5,6 +5,7 @@ import { toolRegistry, type ToolResult } from '../tools/index.js';
 import { toolSpinner } from '../cli/spinner.js';
 import { ConfigError, LLMError, APIError, ToolError } from './errors.js';
 import { logger } from './logger.js';
+import { retry, CircuitBreaker, type RetryOptions } from './retry.js';
 
 export interface LLMMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -44,6 +45,11 @@ export interface ChatOptions {
 
 export class LLMClient {
   private client: OpenAI | null = null;
+  private circuitBreaker = new CircuitBreaker({
+    failureThreshold: 3,
+    recoveryTimeout: 30000,
+    monitoringPeriod: 10000,
+  });
 
   private getClient(): OpenAI {
     if (!this.client) {
@@ -110,29 +116,48 @@ export class LLMClient {
   async fetchModels(): Promise<ModelInfo[]> {
     const client = this.getClient();
 
-    try {
-      const response = await client.models.list();
-      const models: ModelInfo[] = [];
+    const retryOptions: RetryOptions = {
+      maxAttempts: 3,
+      baseDelay: 2000,
+      maxDelay: 10000,
+      retryableErrors: (error: unknown) => {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        return errorMsg.includes('timeout') || 
+               errorMsg.includes('rate limit') || 
+               errorMsg.includes('connection');
+      },
+    };
 
-      for await (const model of response) {
-        models.push({
-          id: model.id,
-          owned_by: model.owned_by,
-        });
-      }
+    const result = await retry(async () => {
+      return this.circuitBreaker.execute(async () => {
+        const response = await client.models.list();
+        const models: ModelInfo[] = [];
 
-      // Sort models alphabetically
-      return models.sort((a, b) => a.id.localeCompare(b.id));
-    } catch (error) {
-      const apiError = error instanceof Error ? new APIError(`Failed to fetch models: ${error.message}`, {
-        originalError: error.name,
-        endpoint: 'models.list()'
+        for await (const model of response) {
+          models.push({
+            id: model.id,
+            owned_by: model.owned_by,
+          });
+        }
+
+        // Sort models alphabetically
+        return models.sort((a, b) => a.id.localeCompare(b.id));
+      });
+    }, retryOptions);
+
+    if (!result.success) {
+      const apiError = result.error ? new APIError(`Failed to fetch models: ${result.error.message}`, {
+        originalError: result.error.name,
+        endpoint: 'models.list()',
+        attempts: result.attempts
       }) : new APIError('Failed to fetch models: Unknown error', {
         endpoint: 'models.list()'
       });
       logger.error(apiError);
       throw apiError;
     }
+
+    return result.result!;
   }
 
   async chat(messages: LLMMessage[], options?: ChatOptions): Promise<LLMResponse> {
@@ -143,60 +168,98 @@ export class LLMClient {
       ? toolRegistry.toOpenAITools() as ChatCompletionTool[]
       : undefined;
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: this.formatMessages(messages),
-      temperature: options?.temperature ?? 0.7,
-      tools,
-    });
+    const retryOptions: RetryOptions = {
+      maxAttempts: 3,
+      baseDelay: 1000,
+      maxDelay: 15000,
+      retryableErrors: (error: unknown) => {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        return errorMsg.includes('timeout') || 
+               errorMsg.includes('rate limit') || 
+               errorMsg.includes('connection') ||
+               errorMsg.includes('overloaded');
+      },
+    };
 
-    const choice = response.choices[0];
+    const result = await retry(async () => {
+      return this.circuitBreaker.execute(async () => {
+        const response = await client.chat.completions.create({
+          model,
+          messages: this.formatMessages(messages),
+          temperature: options?.temperature ?? 0.7,
+          tools,
+          max_tokens: 4000, // Add token limit for safety
+        });
 
-    // Check for tool calls
-    if (choice?.message?.tool_calls && choice.message.tool_calls.length > 0) {
-      return {
-        content: choice.message.content || '',
-        toolCalls: choice.message.tool_calls
-          .filter((tc): tc is typeof tc & { function: { name: string; arguments: string } } =>
-            'function' in tc && tc.function !== undefined
-          )
-          .map((tc) => ({
-            id: tc.id,
-            type: 'function' as const,
-            function: {
-              name: tc.function.name,
-              arguments: tc.function.arguments,
-            },
-          })),
-        usage: response.usage
-          ? {
-            promptTokens: response.usage.prompt_tokens,
-            completionTokens: response.usage.completion_tokens,
-            totalTokens: response.usage.total_tokens,
-          }
-          : undefined,
-      };
-    }
+        const choice = response.choices[0];
 
-    if (!choice?.message?.content) {
-      const error = new LLMError('No response from LLM', {
+        if (!choice) {
+          throw new LLMError('No choice returned from LLM', {
+            model: model,
+            prompt: messages
+          });
+        }
+
+        // Check for tool calls
+        if (choice?.message?.tool_calls && choice.message.tool_calls.length > 0) {
+          return {
+            content: choice.message.content || '',
+            toolCalls: choice.message.tool_calls
+              .filter((tc): tc is typeof tc & { function: { name: string; arguments: string } } =>
+                'function' in tc && tc.function !== undefined
+              )
+              .map((tc) => ({
+                id: tc.id,
+                type: 'function' as const,
+                function: {
+                  name: tc.function.name,
+                  arguments: tc.function.arguments,
+                },
+              })),
+            usage: response.usage
+              ? {
+                promptTokens: response.usage.prompt_tokens,
+                completionTokens: response.usage.completion_tokens,
+                totalTokens: response.usage.total_tokens,
+              }
+              : undefined,
+          };
+        }
+
+        if (!choice?.message?.content) {
+          throw new LLMError('No response from LLM', {
+            model: model,
+            prompt: messages
+          });
+        }
+
+        return {
+          content: choice.message.content,
+          usage: response.usage
+            ? {
+              promptTokens: response.usage.prompt_tokens,
+              completionTokens: response.usage.completion_tokens,
+              totalTokens: response.usage.total_tokens,
+            }
+            : undefined,
+        };
+      });
+    }, retryOptions);
+
+    if (!result.success) {
+      const llmError = result.error ? new LLMError(result.error.message, {
+        model: model,
+        prompt: messages,
+        attempts: result.attempts
+      }) : new LLMError('Unknown LLM error', {
         model: model,
         prompt: messages
       });
-      logger.error(error);
-      throw error;
+      logger.error(llmError);
+      throw llmError;
     }
 
-    return {
-      content: choice.message.content,
-      usage: response.usage
-        ? {
-          promptTokens: response.usage.prompt_tokens,
-          completionTokens: response.usage.completion_tokens,
-          totalTokens: response.usage.total_tokens,
-        }
-        : undefined,
-    };
+    return result.result!;
   }
 
   async executeToolCalls(toolCalls: ToolCall[]): Promise<{ toolCallId: string; result: ToolResult }[]> {

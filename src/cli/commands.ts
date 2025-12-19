@@ -110,8 +110,21 @@ export class CommandHandler {
 
   private async chatWithAgent(agent: AgentType, message: string): Promise<boolean> {
     try {
+      // Input validation
+      if (!message || typeof message !== 'string') {
+        terminalUI.printError('Message is required and must be a string');
+        return true;
+      }
+
+      if (message.length > 50000) {
+        terminalUI.printError('Message too long (max 50000 characters)');
+        return true;
+      }
+
       // Add user message to conversation
       orchestrator.addUserMessage(message);
+
+      logger.info(`Starting chat with agent: ${agent}`, { messageLength: message.length });
 
       terminalUI.printAgentStart(agent);
 
@@ -122,10 +135,15 @@ export class CommandHandler {
       }
 
       terminalUI.printComplete();
+      logger.info(`Chat completed with agent: ${agent}`);
     } catch (error) {
       const appError = createErrorFromUnknown(error);
-      logger.error(appError);
-      terminalUI.printError(appError.message);
+      logger.error(`Chat failed with agent: ${agent}`, { 
+        error: appError.message, 
+        agent,
+        messageLength: message.length 
+      });
+      terminalUI.printError(`Failed to chat with ${agent}: ${appError.message}`);
     }
 
     return true;
@@ -185,44 +203,75 @@ export class CommandHandler {
   async startInteractiveSession(): Promise<void> {
     this.running = true;
 
-    // Check for first run - run interactive setup
-    if (configManager.isFirstRun()) {
-      const setupSuccess = await terminalUI.runSetupWizard();
-      if (!setupSuccess) {
-        return;
-      }
-    } else if (!configManager.hasApiKey()) {
-      // Has been configured before but no API key
-      terminalUI.printInfo(
-        'No API key configured. Please set your API key:\n' +
-        '  - Set OPENAI_API_KEY environment variable, or\n' +
-        '  - Run: devvy config set-key <your-key>'
-      );
-    }
+    try {
+      logger.info('Starting interactive session');
 
-    terminalUI.printBanner();
-    terminalUI.printHelp();
-
-    while (this.running) {
-      try {
-        const input = await terminalUI.promptForInput();
-        this.running = await this.handleCommand(input);
-      } catch (error) {
-        // Check for readline close error
-        const appError = createErrorFromUnknown(error);
-        if (
-          appError instanceof Error &&
-          'code' in appError &&
-          (appError as NodeJS.ErrnoException).code === 'ERR_USE_AFTER_CLOSE'
-        ) {
-          break;
+      // Check for first run - run interactive setup
+      if (configManager.isFirstRun()) {
+        logger.info('First run detected, starting setup wizard');
+        const setupSuccess = await terminalUI.runSetupWizard();
+        if (!setupSuccess) {
+          logger.info('Setup cancelled by user');
+          return;
         }
-        logger.error(appError);
-        terminalUI.printError(appError.message);
+      } else if (!configManager.hasApiKey()) {
+        // Has been configured before but no API key
+        const message = 
+          'No API key configured. Please set your API key:\n' +
+          '  - Set OPENAI_API_KEY environment variable, or\n' +
+          '  - Run: devvy config set-key <your-key>';
+        logger.warn('No API key configured');
+        terminalUI.printInfo(message);
       }
-    }
 
-    terminalUI.close();
+      terminalUI.printBanner();
+      terminalUI.printHelp();
+
+      while (this.running) {
+        try {
+          const input = await terminalUI.promptForInput();
+          
+          // Validate input
+          if (!input || typeof input !== 'string') {
+            continue;
+          }
+
+          if (input.length > 100000) {
+            terminalUI.printError('Input too long (max 100000 characters)');
+            continue;
+          }
+
+          this.running = await this.handleCommand(input);
+        } catch (error) {
+          const appError = createErrorFromUnknown(error);
+          
+          // Check for readline close error or intentional exit
+          if (
+            appError instanceof Error &&
+            ('code' in appError && (appError as NodeJS.ErrnoException).code === 'ERR_USE_AFTER_CLOSE' ||
+             appError.message.includes('TerminalUI is closed') ||
+             appError.message.includes('Readline interface closed'))
+          ) {
+            logger.info('Terminal interface closed, exiting session');
+            break;
+          }
+          
+          logger.error('Error in interactive session', { 
+            error: appError.message,
+            code: (appError as any).code 
+          });
+          
+          // Don't print error for user interruptions
+          if (!appError.message.includes('prompt timeout') && 
+              !appError.message.includes('force closed')) {
+            terminalUI.printError('An error occurred. Please try again or use /exit to quit.');
+          }
+        }
+      }
+    } finally {
+      logger.info('Interactive session ended');
+      terminalUI.close();
+    }
   }
 }
 

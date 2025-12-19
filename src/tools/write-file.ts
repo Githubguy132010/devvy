@@ -3,6 +3,7 @@ import { dirname } from 'path';
 import { BaseTool, type ToolResult } from './base.js';
 import { FileSystemError } from '../core/errors.js';
 import { logger } from '../core/logger.js';
+import { validateFilePath, requireValid } from '../core/validation.js';
 
 export class WriteFileTool extends BaseTool {
     readonly name = 'write_file';
@@ -26,6 +27,38 @@ export class WriteFileTool extends BaseTool {
         const path = args.path as string;
         const content = args.content as string;
 
+        // Input validation
+        if (!path || typeof path !== 'string') {
+            return {
+                success: false,
+                error: 'Path is required and must be a string',
+            };
+        }
+
+        if (content === undefined || typeof content !== 'string') {
+            return {
+                success: false,
+                error: 'Content is required and must be a string',
+            };
+        }
+
+        // Security validation for file path
+        const pathValidation = validateFilePath(path, true); // allowWrite = true
+        if (!pathValidation.isValid) {
+            return {
+                success: false,
+                error: pathValidation.errors.join(', '),
+            };
+        }
+
+        // Content size validation
+        if (content.length > 10000000) { // 10MB limit
+            return {
+                success: false,
+                error: 'Content too large (max 10MB)',
+            };
+        }
+
         try {
             // Ensure parent directory exists
             const dir = dirname(path);
@@ -34,6 +67,7 @@ export class WriteFileTool extends BaseTool {
             // Write the file
             await writeFile(path, content, 'utf-8');
 
+            logger.info('File written successfully', { path, size: content.length });
             return {
                 success: true,
                 output: `File written successfully: ${path}`,
