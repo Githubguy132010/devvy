@@ -5,6 +5,8 @@ import { select, password } from '@inquirer/prompts';
 import { orchestrator, llmClient, type AgentType } from '../core/index.js';
 import { conversationManager } from '../core/conversation.js';
 import { configManager, PROVIDER_CONFIG, type ApiProvider } from '../config/index.js';
+import { logger } from '../core/logger.js';
+import { createErrorFromUnknown } from '../core/errors.js';
 
 const AGENT_COLORS: Record<AgentType | 'user', (text: string) => string> = {
   coder: chalk.green,
@@ -337,6 +339,8 @@ export class TerminalUI {
       return true;
     } catch (error) {
       rl.close();
+      const appError = createErrorFromUnknown(error);
+      logger.error(appError);
       this.printError('Setup failed. Please try again.');
       return false;
     }
@@ -405,15 +409,17 @@ export class TerminalUI {
       this.printSuccess(`Model set to: ${selectedModel}`);
     } catch (error) {
       // Handle user cancellation (Ctrl+C) - check for ExitPromptError or common cancellation patterns
-      if (error instanceof Error &&
-        (error.name === 'ExitPromptError' ||
-          error.message.includes('force closed') ||
-          error.message.includes('cancelled'))) {
+      const appError = createErrorFromUnknown(error);
+      if (appError instanceof Error &&
+        (appError.name === 'ExitPromptError' ||
+          appError.message.includes('force closed') ||
+          appError.message.includes('cancelled'))) {
         this.printInfo(`Keeping current model: ${configManager.model}`);
         return;
       }
       spinner.fail('Failed to fetch models');
-      this.printError(error instanceof Error ? error.message : 'Unknown error');
+      logger.error(appError);
+      this.printError(appError.message);
       this.printInfo('You can still set a model manually with: devvy config set-model <model>');
     }
   }
