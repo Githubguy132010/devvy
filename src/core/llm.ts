@@ -5,6 +5,8 @@ import { randomUUID } from 'crypto';
 import { configManager } from '../config/index.js';
 import { toolRegistry, type ToolResult } from '../tools/index.js';
 import { toolSpinner } from '../cli/spinner.js';
+import { ConfigError, LLMError, APIError, ToolError } from './errors.js';
+import { logger } from './logger.js';
 
 export interface LLMMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -50,7 +52,11 @@ export class LLMClient {
     if (!this.openaiClient) {
       const apiKey = configManager.apiKey;
       if (!apiKey) {
-        throw new Error('API key not configured. Run "devvy config set-key" to configure your API key.');
+        const error = new ConfigError('API key not configured. Run "devvy config set-key" to configure your API key.', {
+          missingConfig: 'apiKey'
+        });
+        logger.error(error);
+        throw error;
       }
 
       this.openaiClient = new OpenAI({
@@ -269,7 +275,14 @@ export class LLMClient {
         return models.sort((a, b) => a.id.localeCompare(b.id));
       }
     } catch (error) {
-      throw new Error(`Failed to fetch models: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const apiError = error instanceof Error ? new APIError(`Failed to fetch models: ${error.message}`, {
+        originalError: error.name,
+        endpoint: 'models.list()'
+      }) : new APIError('Failed to fetch models: Unknown error', {
+        endpoint: 'models.list()'
+      });
+      logger.error(apiError);
+      throw apiError;
     }
   }
 
@@ -455,11 +468,15 @@ export class LLMClient {
 
         results.push({ toolCallId: call.id, result });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        toolSpinner.fail(errorMessage);
+        const toolError = error instanceof Error ? new ToolError(error.message, call.function.name, {
+          originalError: error.name,
+          arguments: call.function.arguments
+        }) : new ToolError('Unknown error executing tool', call.function.name);
+        logger.error(toolError);
+        toolSpinner.fail(toolError.message);
         results.push({
           toolCallId: call.id,
-          result: { success: false, error: errorMessage },
+          result: { success: false, error: toolError.message },
         });
       }
     }

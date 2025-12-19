@@ -1,5 +1,7 @@
 import { readFile, writeFile } from 'fs/promises';
 import { BaseTool, type ToolResult } from './base.js';
+import { FileSystemError } from '../core/errors.js';
+import { logger } from '../core/logger.js';
 
 export class EditFileTool extends BaseTool {
     readonly name = 'edit_file';
@@ -78,9 +80,12 @@ export class EditFileTool extends BaseTool {
                 output: `File edited successfully: ${path} (${matchCount} replacement${matchCount > 1 ? 's' : ''} made)`,
             };
         } catch (error) {
+            const fileError = error instanceof Error ? new FileSystemError(error.message, path, { originalError: error.name }) : new FileSystemError('Unknown error editing file', path);
+            logger.error(fileError);
+            
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error editing file',
+                error: fileError.message,
             };
         }
     }

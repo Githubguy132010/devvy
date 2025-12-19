@@ -29,7 +29,7 @@ bun install
 bun run build
 
 # Link globally (optional)
-bun link
+bun link devvy
 ```
 
 ## Quick Start

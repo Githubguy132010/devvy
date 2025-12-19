@@ -1,5 +1,7 @@
 import { readFile } from 'fs/promises';
 import { BaseTool, type ToolResult } from './base.js';
+import { FileSystemError } from '../core/errors.js';
+import { logger } from '../core/logger.js';
 
 export class ReadFileTool extends BaseTool {
     readonly name = 'read_file';
@@ -48,9 +50,12 @@ export class ReadFileTool extends BaseTool {
                 output: content,
             };
         } catch (error) {
+            const fileError = error instanceof Error ? new FileSystemError(error.message, path, { originalError: error.name }) : new FileSystemError('Unknown error reading file', path);
+            logger.error(fileError);
+            
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error reading file',
+                error: fileError.message,
             };
         }
     }

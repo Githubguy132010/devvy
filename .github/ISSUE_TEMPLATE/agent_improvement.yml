@@ -1,0 +1,153 @@
+name: 🤖 Agent Improvement
+description: Suggest improvements to an existing agent's behavior or propose a new agent
+title: "[Agent]: "
+labels: ["agent", "enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Devvy's multi-agent system is at its core. Help us improve agent behavior or suggest new specialized agents!
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of Agent Request
+      description: What kind of agent improvement are you suggesting?
+      options:
+        - Improve Existing Agent
+        - New Agent Proposal
+        - Agent Interaction/Collaboration
+        - Agent Prompt/Personality Tuning
+    validations:
+      required: true
+
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Existing Agent (if applicable)
+      description: Which existing agent does this relate to?
+      options:
+        - The Coder
+        - The Critic
+        - The Debugger
+        - The Architect
+        - The End User
+        - All Agents
+        - Not Applicable (New Agent)
+    validations:
+      required: true
+
+  - type: input
+    id: new-agent-name
+    attributes:
+      label: New Agent Name (if proposing new agent)
+      description: What would you call this new agent?
+      placeholder: "e.g., The Tester, The Security Expert, The Performance Optimizer"
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current Behavior
+      description: If improving an existing agent, describe the current behavior.
+      placeholder: Currently, when I ask @coder to..., it responds with...
+
+  - type: textarea
+    id: desired-behavior
+    attributes:
+      label: Desired Behavior
+      description: Describe how the agent should behave or what the new agent should do.
+      placeholder: The agent should... / The new agent would...
+    validations:
+      required: true
+
+  - type: textarea
+    id: agent-role
+    attributes:
+      label: Agent Role & Expertise
+      description: What is this agent's primary role and area of expertise?
+      placeholder: "This agent would specialize in... / The agent's focus should be..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: scenarios
+    attributes:
+      label: Example Scenarios
+      description: Provide specific examples of how the agent would be used.
+      placeholder: |
+        Scenario 1: User asks "@agent ..."
+        Agent responds: "..."
+
+        Scenario 2: During code review...
+    validations:
+      required: true
+
+  - type: textarea
+    id: collaboration
+    attributes:
+      label: Agent Collaboration
+      description: How should this agent interact with other agents?
+      placeholder: "This agent should work closely with... / It would complement... / During brainstorming..."
+
+  - type: dropdown
+    id: tools
+    attributes:
+      label: Tool Usage
+      description: Should this agent use tools (bash, file operations, etc.)?
+      options:
+        - Yes - Full tool access
+        - Yes - Limited tool access
+        - No - Conversational only
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: temperature
+    attributes:
+      label: Suggested Temperature
+      description: What creativity level? (0.0 = focused/deterministic, 1.0 = creative)
+      placeholder: "e.g., 0.3 for precise code, 0.7 for creative design"
+
+  - type: textarea
+    id: prompt-suggestions
+    attributes:
+      label: System Prompt Suggestions
+      description: If you have ideas for the agent's system prompt, share them here.
+      placeholder: "Key traits: ...\nApproach: ...\nAvoid: ..."
+
+  - type: textarea
+    id: special-commands
+    attributes:
+      label: Special Commands
+      description: Should there be special commands for this agent (like @review, @brainstorm)?
+      placeholder: "e.g., @refactor, @optimize, @secure"
+
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Benefits
+      description: What benefits would this improvement/agent bring to Devvy users?
+      placeholder: This would help users...
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical
+    attributes:
+      label: Technical Implementation Notes
+      description: Any technical considerations or implementation suggestions?
+      placeholder: Consider using... / This would require... / Could integrate with...
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues for similar agent improvement requests
+          required: true
+        - label: I have provided clear scenarios showing how this agent would be used
+          required: true
+        - label: I would be willing to help test this agent improvement
+          required: false

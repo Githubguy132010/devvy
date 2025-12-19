@@ -2,6 +2,8 @@ import { terminalUI } from './ui.js';
 import { orchestrator, type AgentType } from '../core/index.js';
 import { configManager } from '../config/index.js';
 import { fuzzyMatchCommand, SLASH_COMMANDS } from './fuzzy.js';
+import { logger } from '../core/logger.js';
+import { createErrorFromUnknown } from '../core/errors.js';
 
 export class CommandHandler {
   private running = false;
@@ -121,9 +123,9 @@ export class CommandHandler {
 
       terminalUI.printComplete();
     } catch (error) {
-      terminalUI.printError(
-        error instanceof Error ? error.message : 'An unknown error occurred'
-      );
+      const appError = createErrorFromUnknown(error);
+      logger.error(appError);
+      terminalUI.printError(appError.message);
     }
 
     return true;
@@ -147,9 +149,9 @@ export class CommandHandler {
         }
       }
     } catch (error) {
-      terminalUI.printError(
-        error instanceof Error ? error.message : 'An unknown error occurred'
-      );
+      const appError = createErrorFromUnknown(error);
+      logger.error(appError);
+      terminalUI.printError(appError.message);
     }
 
     return true;
@@ -172,9 +174,9 @@ export class CommandHandler {
 
       terminalUI.printSuccess('Brainstorm session complete!');
     } catch (error) {
-      terminalUI.printError(
-        error instanceof Error ? error.message : 'An unknown error occurred'
-      );
+      const appError = createErrorFromUnknown(error);
+      logger.error(appError);
+      terminalUI.printError(appError.message);
     }
 
     return true;
@@ -207,16 +209,16 @@ export class CommandHandler {
         this.running = await this.handleCommand(input);
       } catch (error) {
         // Check for readline close error
+        const appError = createErrorFromUnknown(error);
         if (
-          error instanceof Error &&
-          'code' in error &&
-          (error as NodeJS.ErrnoException).code === 'ERR_USE_AFTER_CLOSE'
+          appError instanceof Error &&
+          'code' in appError &&
+          (appError as NodeJS.ErrnoException).code === 'ERR_USE_AFTER_CLOSE'
         ) {
           break;
         }
-        terminalUI.printError(
-          error instanceof Error ? error.message : 'An unknown error occurred'
-        );
+        logger.error(appError);
+        terminalUI.printError(appError.message);
       }
     }
 

@@ -1,6 +1,8 @@
 import { writeFile, mkdir } from 'fs/promises';
 import { dirname } from 'path';
 import { BaseTool, type ToolResult } from './base.js';
+import { FileSystemError } from '../core/errors.js';
+import { logger } from '../core/logger.js';
 
 export class WriteFileTool extends BaseTool {
     readonly name = 'write_file';
@@ -37,9 +39,12 @@ export class WriteFileTool extends BaseTool {
                 output: `File written successfully: ${path}`,
             };
         } catch (error) {
+            const fileError = error instanceof Error ? new FileSystemError(error.message, path, { originalError: error.name }) : new FileSystemError('Unknown error writing file', path);
+            logger.error(fileError);
+            
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error writing file',
+                error: fileError.message,
             };
         }
     }
