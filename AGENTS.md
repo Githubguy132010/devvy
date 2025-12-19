@@ -6,8 +6,8 @@ This file provides guidance to agents when working with code in this repository.
 
 Before submitting any changes, you **must** perform the following checks:
 
-1.  **Run Tests**: Execute `bun test` to run the test suite. All tests must pass.
-2.  **Run Build**: Execute `bun run build` to ensure the project compiles without errors.
+1. **Run Tests**: Execute `bun test` to run the test suite. All tests must pass.
+2. **Run Build**: Execute `bun run build` to ensure the project compiles without errors.
 
 ## Non-Obvious Project-Specific Information
 
