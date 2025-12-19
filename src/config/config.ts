@@ -55,8 +55,15 @@ class ConfigManager {
 
   get apiKey(): string | undefined {
     // Check environment variables based on provider first
-    const provider = this.apiProvider;
-    const envVar = PROVIDER_CONFIG[provider].envVar;
+    const provider = this.apiProvider || 'openai';
+    const providerConfig = PROVIDER_CONFIG[provider];
+    
+    if (!providerConfig) {
+      console.error(`Provider config not found for: ${provider}`, { availableProviders: Object.keys(PROVIDER_CONFIG) });
+      return undefined;
+    }
+    
+    const envVar = providerConfig.envVar;
     if (process.env[envVar]) {
       return process.env[envVar];
     }
@@ -77,7 +84,10 @@ class ConfigManager {
   }
 
   get apiProvider(): ApiProvider {
-    return this.config.get('apiProvider');
+    const provider = this.config.get('apiProvider');
+    // Validate that the provider is valid, default to 'openai' if not
+    const validProviders: ApiProvider[] = ['openai', 'anthropic', 'openrouter', 'custom'];
+    return validProviders.includes(provider as ApiProvider) ? (provider as ApiProvider) : 'openai';
   }
 
   set apiProvider(provider: ApiProvider) {
@@ -98,7 +108,7 @@ class ConfigManager {
   }
 
   get model(): string {
-    return this.config.get('model');
+    return this.config.get('model') || 'gpt-4o';
   }
 
   set model(model: string) {
@@ -106,7 +116,8 @@ class ConfigManager {
   }
 
   get setupComplete(): boolean {
-    return this.config.get('setupComplete') || false;
+    const value = this.config.get('setupComplete');
+    return value === true ? true : false;
   }
 
   set setupComplete(complete: boolean) {
