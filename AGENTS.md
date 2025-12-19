@@ -1,4 +1,4 @@
-# Devvy - GitHub Copilot Instructions
+# Devvy
 
 ## Project Overview
 
