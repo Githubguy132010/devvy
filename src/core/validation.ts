@@ -209,12 +209,12 @@ export function validateConfig(data: Record<string, unknown>): ValidationResult 
                key.length >= 10;
       },
     },
-    {
-      field: 'apiProvider',
-      required: true,
-      type: 'string',
-      pattern: /^(openai|anthropic|openrouter|custom)$/,
-    },
+     {
+       field: 'apiProvider',
+       required: true,
+       type: 'string',
+       pattern: /^(openai|anthropic|openrouter|custom|gemini)$/,
+     },
     {
       field: 'model',
       required: true,

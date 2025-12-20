@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
+import { GoogleGenAI } from '@google/genai';
 import { configManager } from '../config/index.js';
 import { toolRegistry, type ToolResult } from '../tools/index.js';
 import { toolSpinner } from '../cli/spinner.js';
@@ -44,15 +45,16 @@ export interface ChatOptions {
 }
 
 export class LLMClient {
-  private client: OpenAI | null = null;
+  private openaiClient: OpenAI | null = null;
+  private geminiClient: GoogleGenAI | null = null;
   private circuitBreaker = new CircuitBreaker({
     failureThreshold: 3,
     recoveryTimeout: 30000,
     monitoringPeriod: 10000,
   });
 
-  private getClient(): OpenAI {
-    if (!this.client) {
+  private getOpenAIClient(): OpenAI {
+    if (!this.openaiClient) {
       const apiKey = configManager.apiKey;
       if (!apiKey) {
         const error = new ConfigError('API key not configured. Run "devvy config set-key" to configure your API key.', {
@@ -62,12 +64,78 @@ export class LLMClient {
         throw error;
       }
 
-      this.client = new OpenAI({
+      this.openaiClient = new OpenAI({
         apiKey,
         baseURL: configManager.apiBaseUrl,
       });
     }
-    return this.client;
+    return this.openaiClient;
+  }
+
+  private getGeminiClient(): GoogleGenAI {
+    if (!this.geminiClient) {
+      const apiKey = configManager.apiKey;
+      if (!apiKey) {
+        const error = new ConfigError('API key not configured. Run "devvy config set-key" to configure your API key.', {
+          missingConfig: 'apiKey'
+        });
+        logger.error(error);
+        throw error;
+      }
+
+      this.geminiClient = new GoogleGenAI({ apiKey });
+    }
+    return this.geminiClient;
+  }
+
+  private formatMessagesForGemini(messages: LLMMessage[]): any[] {
+    const contents: any[] = [];
+
+    for (const message of messages) {
+      const parts: any[] = [];
+
+      if (message.content) {
+        parts.push({ text: message.content });
+      }
+
+      if (message.tool_calls) {
+        for (const tc of message.tool_calls) {
+          parts.push({
+            functionCall: {
+              name: tc.function.name,
+              args: JSON.parse(tc.function.arguments),
+            },
+          });
+        }
+      }
+
+      if (message.tool_call_id && message.role === 'tool') {
+        parts.push({
+          functionResponse: {
+            name: message.tool_call_id, // Assuming tool_call_id is the function name
+            response: { content: message.content },
+          },
+        });
+      }
+
+      contents.push({
+        role: message.role === 'assistant' ? 'model' : message.role === 'system' ? 'user' : message.role,
+        parts,
+      });
+    }
+
+    return contents;
+  }
+
+  private formatToolsForGemini(): any {
+    const tools = toolRegistry.toOpenAITools();
+    return {
+      functionDeclarations: tools.map((tool: any) => ({
+        name: tool.function.name,
+        description: tool.function.description,
+        parameters: tool.function.parameters,
+      })),
+    };
   }
 
   private formatMessages(messages: LLMMessage[]): ChatCompletionMessageParam[] {
@@ -114,7 +182,7 @@ export class LLMClient {
   }
 
   async fetchModels(): Promise<ModelInfo[]> {
-    const client = this.getClient();
+    const provider = configManager.apiProvider;
 
     const retryOptions: RetryOptions = {
       maxAttempts: 3,
@@ -122,26 +190,35 @@ export class LLMClient {
       maxDelay: 10000,
       retryableErrors: (error: unknown) => {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        return errorMsg.includes('timeout') || 
-               errorMsg.includes('rate limit') || 
+        return errorMsg.includes('timeout') ||
+               errorMsg.includes('rate limit') ||
                errorMsg.includes('connection');
       },
     };
 
     const result = await retry(async () => {
       return this.circuitBreaker.execute(async () => {
-        const response = await client.models.list();
-        const models: ModelInfo[] = [];
+        if (provider === 'gemini') {
+          const client = this.getGeminiClient();
+          const response = await client.models.list();
+          const models: ModelInfo[] = (response as any).models.map((model: any) => ({
+            id: model.name?.replace('models/', '') || model.name, // Remove 'models/' prefix
+            owned_by: 'google',
+          }));
+          return models;
+        } else {
+          const client = this.getOpenAIClient();
+          const response = await client.models.list();
+          const models: ModelInfo[] = [];
 
-        for await (const model of response) {
-          models.push({
-            id: model.id,
-            owned_by: model.owned_by,
-          });
+          for await (const model of response) {
+            models.push({
+              id: model.id,
+              owned_by: model.owned_by,
+            });
+          }
+          return models.sort((a, b) => a.id.localeCompare(b.id));
         }
-
-        // Sort models alphabetically
-        return models.sort((a, b) => a.id.localeCompare(b.id));
       });
     }, retryOptions);
 
@@ -161,12 +238,8 @@ export class LLMClient {
   }
 
   async chat(messages: LLMMessage[], options?: ChatOptions): Promise<LLMResponse> {
-    const client = this.getClient();
+    const provider = configManager.apiProvider;
     const model = configManager.model;
-
-    const tools: ChatCompletionTool[] | undefined = options?.tools
-      ? toolRegistry.toOpenAITools() as ChatCompletionTool[]
-      : undefined;
 
     const retryOptions: RetryOptions = {
       maxAttempts: 3,
@@ -174,8 +247,8 @@ export class LLMClient {
       maxDelay: 15000,
       retryableErrors: (error: unknown) => {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        return errorMsg.includes('timeout') || 
-               errorMsg.includes('rate limit') || 
+        return errorMsg.includes('timeout') ||
+               errorMsg.includes('rate limit') ||
                errorMsg.includes('connection') ||
                errorMsg.includes('overloaded');
       },
@@ -183,39 +256,121 @@ export class LLMClient {
 
     const result = await retry(async () => {
       return this.circuitBreaker.execute(async () => {
-        const response = await client.chat.completions.create({
-          model,
-          messages: this.formatMessages(messages),
-          temperature: options?.temperature ?? 0.7,
-          tools,
-          max_tokens: 4000, // Add token limit for safety
-        });
+        if (provider === 'gemini') {
+          const client = this.getGeminiClient();
+          const geminiContents = this.formatMessagesForGemini(messages);
+          const geminiTools = options?.tools ? this.formatToolsForGemini() : undefined;
 
-        const choice = response.choices[0];
-
-        if (!choice) {
-          throw new LLMError('No choice returned from LLM', {
-            model: model,
-            prompt: messages
+          const response = await (client.models.generateContent as any)({
+            model,
+            contents: geminiContents,
+            tools: geminiTools ? [geminiTools] : undefined,
+            generationConfig: {
+              temperature: options?.temperature ?? 0.7,
+              maxOutputTokens: 4000,
+            },
           });
-        }
 
-        // Check for tool calls
-        if (choice?.message?.tool_calls && choice.message.tool_calls.length > 0) {
-          return {
-            content: choice.message.content || '',
-            toolCalls: choice.message.tool_calls
-              .filter((tc): tc is typeof tc & { function: { name: string; arguments: string } } =>
-                'function' in tc && tc.function !== undefined
-              )
-              .map((tc) => ({
-                id: tc.id,
-                type: 'function' as const,
+          if (!response.candidates || response.candidates.length === 0) {
+            throw new LLMError('No candidates returned from Gemini', {
+              model: model,
+              prompt: messages
+            });
+          }
+
+          const candidate = response.candidates[0];
+          const parts = candidate.content?.parts || [];
+
+          let content = '';
+          const toolCalls: ToolCall[] = [];
+
+          for (const part of parts) {
+            if (part.text) {
+              content += part.text;
+            }
+            if (part.functionCall) {
+              toolCalls.push({
+                id: part.functionCall.name, // Gemini doesn't have IDs, use name as ID
+                type: 'function',
                 function: {
-                  name: tc.function.name,
-                  arguments: tc.function.arguments,
+                  name: part.functionCall.name,
+                  arguments: JSON.stringify(part.functionCall.args),
                 },
-              })),
+              });
+            }
+          }
+
+          const usage = response.usageMetadata && response.usageMetadata.promptTokenCount !== undefined &&
+                        response.usageMetadata.candidatesTokenCount !== undefined &&
+                        response.usageMetadata.totalTokenCount !== undefined ? {
+            promptTokens: response.usageMetadata.promptTokenCount,
+            completionTokens: response.usageMetadata.candidatesTokenCount,
+            totalTokens: response.usageMetadata.totalTokenCount,
+          } : undefined;
+
+          return {
+            content,
+            toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+            usage,
+          };
+        } else {
+          const client = this.getOpenAIClient();
+          const tools: ChatCompletionTool[] | undefined = options?.tools
+            ? toolRegistry.toOpenAITools() as ChatCompletionTool[]
+            : undefined;
+
+          const response = await client.chat.completions.create({
+            model,
+            messages: this.formatMessages(messages),
+            temperature: options?.temperature ?? 0.7,
+            tools,
+            max_tokens: 4000,
+          });
+
+          const choice = response.choices[0];
+
+          if (!choice) {
+            throw new LLMError('No choice returned from LLM', {
+              model: model,
+              prompt: messages
+            });
+          }
+
+          // Check for tool calls
+          if (choice?.message?.tool_calls && choice.message.tool_calls.length > 0) {
+            return {
+              content: choice.message.content || '',
+              toolCalls: choice.message.tool_calls
+                .filter((tc): tc is typeof tc & { function: { name: string; arguments: string } } =>
+                  'function' in tc && tc.function !== undefined
+                )
+                .map((tc) => ({
+                  id: tc.id,
+                  type: 'function' as const,
+                  function: {
+                    name: tc.function.name,
+                    arguments: tc.function.arguments,
+                  },
+                })),
+              usage: response.usage
+                ? {
+                  promptTokens: response.usage.prompt_tokens,
+                  completionTokens: response.usage.completion_tokens,
+                  totalTokens: response.usage.total_tokens,
+                }
+                : undefined,
+            };
+          }
+
+          if (!choice?.message?.content) {
+            throw new LLMError('No response from LLM', {
+              model: model,
+              prompt: messages
+            });
+          }
+
+          return {
+            content: choice.message.content,
             usage: response.usage
               ? {
                 promptTokens: response.usage.prompt_tokens,
@@ -225,24 +380,6 @@ export class LLMClient {
               : undefined,
           };
         }
-
-        if (!choice?.message?.content) {
-          throw new LLMError('No response from LLM', {
-            model: model,
-            prompt: messages
-          });
-        }
-
-        return {
-          content: choice.message.content,
-          usage: response.usage
-            ? {
-              promptTokens: response.usage.prompt_tokens,
-              completionTokens: response.usage.completion_tokens,
-              totalTokens: response.usage.total_tokens,
-            }
-            : undefined,
-        };
       });
     }, retryOptions);
 
@@ -300,62 +437,110 @@ export class LLMClient {
     messages: LLMMessage[],
     options?: ChatOptions
   ): AsyncGenerator<string | { toolCalls: ToolCall[] }, void, unknown> {
-    const client = this.getClient();
+    const provider = configManager.apiProvider;
     const model = configManager.model;
 
-    const tools: ChatCompletionTool[] | undefined = options?.tools
-      ? toolRegistry.toOpenAITools() as ChatCompletionTool[]
-      : undefined;
+    if (provider === 'gemini') {
+      const client = this.getGeminiClient();
+      const geminiContents = this.formatMessagesForGemini(messages);
+      const geminiTools = options?.tools ? [this.formatToolsForGemini()] : undefined;
 
-    const stream = await client.chat.completions.create({
-      model,
-      messages: this.formatMessages(messages),
-      temperature: options?.temperature ?? 0.7,
-      stream: true,
-      tools,
-    });
+      const stream = await (client.models.generateContent as any)({
+        model,
+        contents: geminiContents,
+        tools: geminiTools,
+        generationConfig: {
+          temperature: options?.temperature ?? 0.7,
+          maxOutputTokens: 4000,
+        },
+        stream: true,
+      });
 
-    const toolCalls: Map<number, ToolCall> = new Map();
+      const toolCalls: ToolCall[] = [];
 
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta;
+      for await (const chunk of stream) {
+        if (chunk.candidates && chunk.candidates.length > 0) {
+          const candidate = chunk.candidates[0];
+          const parts = candidate.content?.parts || [];
 
-      // Handle tool calls in streaming
-      if (delta?.tool_calls) {
-        for (const tc of delta.tool_calls) {
-          const existing = toolCalls.get(tc.index);
-          if (existing) {
-            if (tc.function?.arguments) {
-              existing.function.arguments += tc.function.arguments;
+          for (const part of parts) {
+            if (part.text) {
+              yield part.text;
             }
-          } else if (tc.id && tc.function?.name) {
-            toolCalls.set(tc.index, {
-              id: tc.id,
-              type: 'function',
-              function: {
-                name: tc.function.name,
-                arguments: tc.function.arguments || '',
-              },
-            });
+            if (part.functionCall) {
+              toolCalls.push({
+                id: part.functionCall.name,
+                type: 'function',
+                function: {
+                  name: part.functionCall.name,
+                  arguments: JSON.stringify(part.functionCall.args),
+                },
+              });
+            }
           }
         }
       }
 
-      // Handle content
-      const content = delta?.content;
-      if (content) {
-        yield content;
+      if (toolCalls.length > 0) {
+        yield { toolCalls };
       }
-    }
+    } else {
+      const client = this.getOpenAIClient();
+      const tools: ChatCompletionTool[] | undefined = options?.tools
+        ? toolRegistry.toOpenAITools() as ChatCompletionTool[]
+        : undefined;
 
-    // If we collected tool calls, yield them at the end
-    if (toolCalls.size > 0) {
-      yield { toolCalls: Array.from(toolCalls.values()) };
+      const stream = await client.chat.completions.create({
+        model,
+        messages: this.formatMessages(messages),
+        temperature: options?.temperature ?? 0.7,
+        stream: true,
+        tools,
+      });
+
+      const toolCalls: Map<number, ToolCall> = new Map();
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta;
+
+        // Handle tool calls in streaming
+        if (delta?.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const existing = toolCalls.get(tc.index);
+            if (existing) {
+              if (tc.function?.arguments) {
+                existing.function.arguments += tc.function.arguments;
+              }
+            } else if (tc.id && tc.function?.name) {
+              toolCalls.set(tc.index, {
+                id: tc.id,
+                type: 'function',
+                function: {
+                  name: tc.function.name,
+                  arguments: tc.function.arguments || '',
+                },
+              });
+            }
+          }
+        }
+
+        // Handle content
+        const content = delta?.content;
+        if (content) {
+          yield content;
+        }
+      }
+
+      // If we collected tool calls, yield them at the end
+      if (toolCalls.size > 0) {
+        yield { toolCalls: Array.from(toolCalls.values()) };
+      }
     }
   }
 
   resetClient(): void {
-    this.client = null;
+    this.openaiClient = null;
+    this.geminiClient = null;
   }
 }
 

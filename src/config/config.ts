@@ -4,7 +4,7 @@ import { validateConfig, requireValid } from '../core/validation.js';
 import { ConfigError } from '../core/errors.js';
 import { logger } from '../core/logger.js';
 
-export type ApiProvider = 'openai' | 'anthropic' | 'openrouter' | 'custom';
+export type ApiProvider = 'openai' | 'anthropic' | 'openrouter' | 'custom' | 'gemini';
 
 interface DevvyConfig {
   apiKey?: string;
@@ -39,11 +39,17 @@ export const PROVIDER_CONFIG: Record<ApiProvider, { baseUrl?: string; defaultMod
     envVar: 'OPENROUTER_API_KEY',
     displayName: 'OpenRouter',
   },
-  custom: {
-    defaultModel: 'gpt-4o',
-    envVar: 'API_KEY',
-    displayName: 'Custom Provider',
-  },
+   custom: {
+     defaultModel: 'gpt-4o',
+     envVar: 'API_KEY',
+     displayName: 'Custom Provider',
+   },
+   gemini: {
+     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+     defaultModel: 'gemini-3-pro-preview',
+     envVar: 'GOOGLE_API_KEY',
+     displayName: 'Gemini',
+   },
 };
 
 class ConfigManager {
