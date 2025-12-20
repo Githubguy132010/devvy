@@ -44,6 +44,47 @@ export interface ChatOptions {
   tools?: boolean;
 }
 
+// Gemini API type definitions
+interface GeminiFunctionCallPart {
+  name: string;
+  args?: unknown;
+}
+
+interface GeminiFunctionResponsePart {
+  name: string;
+  response: { content: string };
+}
+
+interface GeminiContentPart {
+  text?: string;
+  functionCall?: GeminiFunctionCallPart;
+  functionResponse?: GeminiFunctionResponsePart;
+}
+
+interface GeminiContent {
+  role: string;
+  parts: GeminiContentPart[];
+}
+
+interface GeminiCandidate {
+  content?: {
+    parts?: GeminiContentPart[];
+  };
+}
+
+interface GeminiGenerateContentResponse {
+  candidates?: GeminiCandidate[];
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
+}
+
+interface GeminiGenerateContentStreamChunk {
+  candidates?: GeminiCandidate[];
+}
+
 export class LLMClient {
   private openaiClient: OpenAI | null = null;
   private geminiClient: GoogleGenAI | null = null;
@@ -88,34 +129,49 @@ export class LLMClient {
     return this.geminiClient;
   }
 
-  private formatMessagesForGemini(messages: LLMMessage[]): any[] {
-    const contents: any[] = [];
+  private formatMessagesForGemini(messages: LLMMessage[]): GeminiContent[] {
+    const contents: GeminiContent[] = [];
 
     for (const message of messages) {
-      const parts: any[] = [];
+      const parts: GeminiContentPart[] = [];
 
-      if (message.content) {
-        parts.push({ text: message.content });
-      }
-
-      if (message.tool_calls) {
-        for (const tc of message.tool_calls) {
-          parts.push({
-            functionCall: {
-              name: tc.function.name,
-              args: JSON.parse(tc.function.arguments),
-            },
-          });
-        }
-      }
-
-      if (message.tool_call_id && message.role === 'tool') {
+      // For tool messages, prefer functionResponse and avoid duplicating content as plain text
+      if (message.role === 'tool' && message.tool_call_id) {
         parts.push({
           functionResponse: {
-            name: message.tool_call_id, // Assuming tool_call_id is the function name
-            response: { content: message.content },
+            name: message.tool_call_id,
+            response: { content: message.content || '' },
           },
         });
+      } else {
+        if (message.content) {
+          parts.push({ text: message.content });
+        }
+
+        if (message.tool_calls) {
+          for (const tc of message.tool_calls) {
+            let parsedArgs: unknown;
+            try {
+              parsedArgs = JSON.parse(tc.function.arguments);
+            } catch (error) {
+              const errorMessage =
+                error instanceof Error ? error.message : String(error);
+              const toolError = new ToolError(
+                `Failed to parse tool arguments: ${errorMessage}`,
+                tc.function.name
+              );
+              logger.error(toolError);
+              throw toolError;
+            }
+
+            parts.push({
+              functionCall: {
+                name: tc.function.name,
+                args: parsedArgs,
+              },
+            });
+          }
+        }
       }
 
       contents.push({
@@ -261,7 +317,20 @@ export class LLMClient {
           const geminiContents = this.formatMessagesForGemini(messages);
           const geminiTools = options?.tools ? this.formatToolsForGemini() : undefined;
 
-          const response = await (client.models.generateContent as any)({
+          // Type-safe API call for Gemini
+          type GeminiGenerateContentRequest = {
+            model: string;
+            contents: GeminiContent[];
+            tools?: unknown[];
+            generationConfig?: {
+              temperature?: number;
+              maxOutputTokens?: number;
+            };
+          };
+
+          const response = await (client.models.generateContent as unknown as (
+            request: GeminiGenerateContentRequest
+          ) => Promise<GeminiGenerateContentResponse>)({
             model,
             contents: geminiContents,
             tools: geminiTools ? [geminiTools] : undefined,
@@ -283,14 +352,17 @@ export class LLMClient {
 
           let content = '';
           const toolCalls: ToolCall[] = [];
+          let toolCallCounter = 0;
 
           for (const part of parts) {
             if (part.text) {
               content += part.text;
             }
             if (part.functionCall) {
+              // Generate unique ID for each tool call to handle multiple calls to the same function
+              const toolCallId = `${part.functionCall.name}-${toolCallCounter++}`;
               toolCalls.push({
-                id: part.functionCall.name, // Gemini doesn't have IDs, use name as ID
+                id: toolCallId,
                 type: 'function',
                 function: {
                   name: part.functionCall.name,
@@ -445,7 +517,21 @@ export class LLMClient {
       const geminiContents = this.formatMessagesForGemini(messages);
       const geminiTools = options?.tools ? [this.formatToolsForGemini()] : undefined;
 
-      const stream = await (client.models.generateContent as any)({
+      // Type-safe API call for Gemini streaming
+      type GeminiGenerateContentStreamRequest = {
+        model: string;
+        contents: GeminiContent[];
+        tools?: unknown[];
+        generationConfig?: {
+          temperature?: number;
+          maxOutputTokens?: number;
+        };
+        stream: true;
+      };
+
+      const stream = await (client.models.generateContent as unknown as (
+        request: GeminiGenerateContentStreamRequest
+      ) => Promise<AsyncIterable<GeminiGenerateContentStreamChunk>>)({
         model,
         contents: geminiContents,
         tools: geminiTools,
@@ -457,6 +543,7 @@ export class LLMClient {
       });
 
       const toolCalls: ToolCall[] = [];
+      let toolCallCounter = 0;
 
       for await (const chunk of stream) {
         if (chunk.candidates && chunk.candidates.length > 0) {
@@ -468,8 +555,10 @@ export class LLMClient {
               yield part.text;
             }
             if (part.functionCall) {
+              // Generate unique ID for each tool call to handle multiple calls to the same function
+              const toolCallId = `${part.functionCall.name}-${toolCallCounter++}`;
               toolCalls.push({
-                id: part.functionCall.name,
+                id: toolCallId,
                 type: 'function',
                 function: {
                   name: part.functionCall.name,

@@ -4,8 +4,8 @@ import { validateConfig } from '../src/core/validation.js';
 import { llmClient } from '../src/core/llm.js';
 import { ConfigError } from '../src/core/errors.js';
 
-// Mock console.error to suppress expected error logs during tests
-global.console.error = jest.fn();
+// Mock console.error to suppress expected error logs during tests, but restore after each test
+let consoleErrorSpy: ReturnType<typeof jest.spyOn> | undefined;
 
 // Mock configManager to avoid validation issues during tests
 mock.module('../src/config/index.js', () => ({
@@ -27,6 +27,11 @@ describe('Configuration Manager', () => {
   beforeEach(() => {
     // Reset config before each test
     configManager.clearConfig();
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy?.mockRestore();
   });
 
   it('should have Gemini in PROVIDER_CONFIG', () => {
