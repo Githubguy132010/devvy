@@ -322,7 +322,7 @@ export class TerminalUI {
       console.log('  ' + chalk.cyan('4)') + ' Custom (OpenAI-compatible API)');
       console.log('  ' + chalk.cyan('5)') + ' Gemini (Gemini 3.0 models)\n');
 
-      const providerChoice = await this.askQuestion(rl, 'Enter your choice (1-4): ');
+      const providerChoice = await this.askQuestion(rl, 'Enter your choice (1-5): ');
 
       const providerMap: Record<string, ApiProvider> = {
         '1': 'openai',
