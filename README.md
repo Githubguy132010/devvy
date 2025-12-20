@@ -54,7 +54,7 @@ devvy setup
 
 - **OpenAI** - GPT-4, GPT-4o, GPT-4-turbo
 - **Anthropic** - Claude 3.5, Claude 3
-- **Google Gemini** - Gemini 2.0, Gemini 1.5
+- **Google Gemini** - Gemini 2.0, Gemini 1.5 (uses beta API endpoint)
 - **OpenRouter** - Access to 100+ models from various providers
 - **Custom** - Any OpenAI-compatible API endpoint
 
@@ -72,7 +72,7 @@ devvy setup
 # Set your API key
 devvy config set-key your-api-key-here
 
-# Set provider (openai, anthropic, openrouter, custom)
+# Set provider (openai, anthropic, openrouter, gemini, custom)
 devvy config set-provider openrouter
 
 # Select model interactively (fetches available models from API)
