@@ -137,9 +137,12 @@ export class LLMClient {
 
       // For tool messages, prefer functionResponse and avoid duplicating content as plain text
       if (message.role === 'tool' && message.tool_call_id) {
+        // Extract function name from tool_call_id (format: "functionName-uuid")
+        // UUID format: 8-4-4-4-12 hex digits separated by hyphens
+        const functionName = message.tool_call_id.replace(/-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i, '');
         parts.push({
           functionResponse: {
-            name: message.tool_call_id,
+            name: functionName,
             response: { content: message.content || '' },
           },
         });
@@ -352,15 +355,14 @@ export class LLMClient {
 
           let content = '';
           const toolCalls: ToolCall[] = [];
-          let toolCallCounter = 0;
 
           for (const part of parts) {
             if (part.text) {
               content += part.text;
             }
             if (part.functionCall) {
-              // Generate unique ID for each tool call to handle multiple calls to the same function
-              const toolCallId = `${part.functionCall.name}-${toolCallCounter++}`;
+              // Generate unique ID for each tool call using function name and UUID
+              const toolCallId = `${part.functionCall.name}-${crypto.randomUUID()}`;
               toolCalls.push({
                 id: toolCallId,
                 type: 'function',
@@ -543,7 +545,6 @@ export class LLMClient {
       });
 
       const toolCalls: ToolCall[] = [];
-      let toolCallCounter = 0;
 
       for await (const chunk of stream) {
         if (chunk.candidates && chunk.candidates.length > 0) {
@@ -555,8 +556,8 @@ export class LLMClient {
               yield part.text;
             }
             if (part.functionCall) {
-              // Generate unique ID for each tool call to handle multiple calls to the same function
-              const toolCallId = `${part.functionCall.name}-${toolCallCounter++}`;
+              // Generate unique ID for each tool call using function name and UUID
+              const toolCallId = `${part.functionCall.name}-${crypto.randomUUID()}`;
               toolCalls.push({
                 id: toolCallId,
                 type: 'function',
