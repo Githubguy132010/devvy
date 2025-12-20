@@ -213,7 +213,7 @@ export function validateConfig(data: Record<string, unknown>): ValidationResult 
       field: 'apiProvider',
       required: true,
       type: 'string',
-      pattern: /^(openai|anthropic|openrouter|custom)$/,
+      pattern: /^(openai|anthropic|openrouter|gemini|custom)$/,
     },
     {
       field: 'model',

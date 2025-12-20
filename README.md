@@ -41,7 +41,7 @@ devvy
 ```
 
 The setup wizard will help you:
-1. Select your AI provider (OpenAI, Anthropic, OpenRouter, or custom)
+1. Select your AI provider (OpenAI, Anthropic, OpenRouter, Google Gemini, or custom)
 2. Enter your API key
 3. Choose your default model
 
@@ -54,6 +54,7 @@ devvy setup
 
 - **OpenAI** - GPT-4, GPT-4o, GPT-4-turbo
 - **Anthropic** - Claude 3.5, Claude 3
+- **Google Gemini** - Gemini 2.0, Gemini 1.5
 - **OpenRouter** - Access to 100+ models from various providers
 - **Custom** - Any OpenAI-compatible API endpoint
 
@@ -95,6 +96,7 @@ You can also use environment variables:
 export OPENAI_API_KEY=your-key      # For OpenAI
 export ANTHROPIC_API_KEY=your-key   # For Anthropic  
 export OPENROUTER_API_KEY=your-key  # For OpenRouter
+export GEMINI_API_KEY=your-key      # For Google Gemini
 ```
 
 ## Usage
