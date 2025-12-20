@@ -7,6 +7,8 @@ import {
   type BaseAgent,
 } from '../agents/index.js';
 import { conversationManager, type AgentRole, type Message } from '../core/index.js';
+import { AgentError } from './errors.js';
+import { logger } from './logger.js';
 
 export type AgentType = 'coder' | 'critic' | 'debugger' | 'architect' | 'enduser';
 
@@ -38,7 +40,9 @@ export class Orchestrator {
   getAgent(type: AgentType): BaseAgent {
     const agent = this.agents.get(type);
     if (!agent) {
-      throw new Error(`Unknown agent type: ${type}`);
+      const error = new AgentError(`Unknown agent type: ${type}`, type);
+      logger.error(error);
+      throw error;
     }
     return agent;
   }
@@ -56,7 +60,9 @@ export class Orchestrator {
     context?: string
   ): AsyncGenerator<{ type: 'chunk' | 'complete'; content: string; message?: Message }> {
     if (!this.isAgentEnabled(type)) {
-      throw new Error(`Agent ${type} is not enabled`);
+      const error = new AgentError(`Agent ${type} is not enabled`, type);
+      logger.error(error);
+      throw error;
     }
 
     const agent = this.getAgent(type);

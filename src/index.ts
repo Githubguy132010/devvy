@@ -5,7 +5,19 @@ import { commandHandler } from './cli/index.js';
 import { configManager, type ApiProvider } from './config/index.js';
 import { llmClient } from './core/index.js';
 import { terminalUI } from './cli/ui.js';
+import { logger } from './core/logger.js';
+import { processManager } from './core/process.js';
+import { createErrorFromUnknown } from './core/errors.js';
 import './tools/init.js'; // Initialize tools on startup
+
+// Register main process handlers
+processManager.registerShutdownHandler({
+  name: 'main-cleanup',
+  priority: 100,
+  handler: async () => {
+    logger.info('Main application cleanup completed');
+  }
+});
 
 const program = new Command();
 
@@ -27,7 +39,13 @@ program
   .command('setup')
   .description('Run the interactive setup wizard')
   .action(async () => {
-    await terminalUI.runSetupWizard();
+    try {
+      await terminalUI.runSetupWizard();
+    } catch (error) {
+      const appError = createErrorFromUnknown(error);
+      logger.error('Setup failed', { error: appError.message });
+      process.exit(1);
+    }
   });
 
 // Configuration commands
@@ -55,12 +73,18 @@ configCmd
   .command('set-model [model]')
   .description('Set the model to use (fetches available models if no model specified)')
   .action(async (model?: string) => {
-    if (model) {
-      configManager.model = model;
-      terminalUI.printSuccess(`Model set to: ${model}`);
-    } else {
-      // Fetch and display available models
-      await terminalUI.selectModel();
+    try {
+      if (model) {
+        configManager.model = model;
+        terminalUI.printSuccess(`Model set to: ${model}`);
+      } else {
+        // Fetch and display available models
+        await terminalUI.selectModel();
+      }
+    } catch (error) {
+      const appError = createErrorFromUnknown(error);
+      logger.error('Failed to set model', { error: appError.message });
+      terminalUI.printError(`Failed to set model: ${appError.message}`);
     }
   });
 
@@ -68,23 +92,35 @@ configCmd
   .command('set-provider <provider>')
   .description('Set the API provider (openai, anthropic, openrouter, custom)')
   .action((provider: string) => {
-    const validProviders = ['openai', 'anthropic', 'openrouter', 'custom'];
-    if (!validProviders.includes(provider)) {
-      terminalUI.printError(`Invalid provider. Choose from: ${validProviders.join(', ')}`);
-      return;
+    try {
+      const validProviders = ['openai', 'anthropic', 'openrouter', 'custom'];
+      if (!validProviders.includes(provider)) {
+        terminalUI.printError(`Invalid provider. Choose from: ${validProviders.join(', ')}`);
+        return;
+      }
+      configManager.apiProvider = provider as ApiProvider;
+      llmClient.resetClient();
+      terminalUI.printSuccess(`Provider set to: ${provider}`);
+    } catch (error) {
+      const appError = createErrorFromUnknown(error);
+      logger.error('Failed to set provider', { error: appError.message });
+      terminalUI.printError(`Failed to set provider: ${appError.message}`);
     }
-    configManager.apiProvider = provider as ApiProvider;
-    llmClient.resetClient();
-    terminalUI.printSuccess(`Provider set to: ${provider}`);
   });
 
 configCmd
   .command('set-base-url <url>')
   .description('Set a custom API base URL (for custom providers)')
   .action((url: string) => {
-    configManager.apiBaseUrl = url;
-    llmClient.resetClient();
-    terminalUI.printSuccess(`Base URL set to: ${url}`);
+    try {
+      configManager.apiBaseUrl = url;
+      llmClient.resetClient();
+      terminalUI.printSuccess(`Base URL set to: ${url}`);
+    } catch (error) {
+      const appError = createErrorFromUnknown(error);
+      logger.error('Failed to set base URL', { error: appError.message });
+      terminalUI.printError(`Failed to set base URL: ${appError.message}`);
+    }
   });
 
 configCmd

@@ -13,3 +13,5 @@ export {
   type AgentType,
   type OrchestratorConfig,
 } from './orchestrator.js';
+export { logger } from './logger.js';
+export { processManager } from './process.js';

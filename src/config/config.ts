@@ -1,5 +1,8 @@
 import Conf from 'conf';
 import * as readline from 'readline';
+import { validateConfig, requireValid } from '../core/validation.js';
+import { ConfigError } from '../core/errors.js';
+import { logger } from '../core/logger.js';
 
 export type ApiProvider = 'openai' | 'anthropic' | 'openrouter' | 'custom';
 
@@ -73,6 +76,21 @@ class ConfigManager {
   }
 
   set apiKey(key: string | undefined) {
+    if (key) {
+      const validation = validateConfig({ 
+        apiKey: key, 
+        apiProvider: this.apiProvider, 
+        model: this.model,
+        apiBaseUrl: this.apiBaseUrl 
+      });
+      
+      if (!validation.isValid) {
+        const error = new ConfigError(`Invalid API key: ${validation.errors.join(', ')}`);
+        logger.error(error);
+        throw error;
+      }
+    }
+    
     this.config.set('apiKey', key);
   }
 
@@ -81,6 +99,19 @@ class ConfigManager {
   }
 
   set apiProvider(provider: ApiProvider) {
+    const validation = validateConfig({ 
+      apiKey: this.apiKey, 
+      apiProvider: provider, 
+      model: this.model,
+      apiBaseUrl: this.apiBaseUrl 
+    });
+    
+    if (!validation.isValid) {
+      const error = new ConfigError(`Invalid provider: ${validation.errors.join(', ')}`);
+      logger.error(error);
+      throw error;
+    }
+    
     this.config.set('apiProvider', provider);
   }
 
@@ -102,6 +133,19 @@ class ConfigManager {
   }
 
   set model(model: string) {
+    const validation = validateConfig({ 
+      apiKey: this.apiKey, 
+      apiProvider: this.apiProvider, 
+      model: model,
+      apiBaseUrl: this.apiBaseUrl 
+    });
+    
+    if (!validation.isValid) {
+      const error = new ConfigError(`Invalid model: ${validation.errors.join(', ')}`);
+      logger.error(error);
+      throw error;
+    }
+    
     this.config.set('model', model);
   }
 

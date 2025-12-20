@@ -1,6 +1,8 @@
 import { readdir, stat } from 'fs/promises';
 import { join } from 'path';
 import { BaseTool, type ToolResult } from './base.js';
+import { FileSystemError } from '../core/errors.js';
+import { logger } from '../core/logger.js';
 
 interface FileEntry {
     name: string;
@@ -51,9 +53,12 @@ export class ListFilesTool extends BaseTool {
                 output: output || '(empty directory)',
             };
         } catch (error) {
+            const fileError = error instanceof Error ? new FileSystemError(error.message, basePath, { originalError: error.name }) : new FileSystemError('Unknown error listing files', basePath);
+            logger.error(fileError);
+            
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error listing files',
+                error: fileError.message,
             };
         }
     }
