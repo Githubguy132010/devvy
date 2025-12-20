@@ -57,7 +57,9 @@ export class TerminalUI {
   }
 
   printHelp(): void {
-    const commands = [
+    const BOX_WIDTH = 75;
+
+    const agentCommands = [
       { icon: AGENT_ICONS.coder, cmd: '@coder <message>', desc: 'Ask the Coder agent' },
       { icon: AGENT_ICONS.critic, cmd: '@critic <message>', desc: 'Ask the Critic agent' },
       { icon: AGENT_ICONS.debugger, cmd: '@debugger <message>', desc: 'Ask the Debugger agent' },
@@ -67,7 +69,7 @@ export class TerminalUI {
       { icon: '💡', cmd: '@brainstorm <topic>', desc: 'All agents brainstorm together' },
     ];
 
-    const systemCmds = [
+    const systemCommands = [
       { icon: '🤖', cmd: '/model', desc: 'Select AI model (scrollable list)' },
       { icon: '⚙️', cmd: '/config', desc: 'Show current configuration' },
       { icon: '🧹', cmd: '/clear', desc: 'Clear conversation history' },
@@ -79,20 +81,27 @@ export class TerminalUI {
     let helpText = chalk.bold('\nAvailable Commands:\n');
 
     const formatCommand = (icon: string, cmd: string, desc: string, pad: number) =>
-      `  ${icon}  ${chalk.cyan(cmd.padEnd(pad))} - ${chalk.dim(desc)}\n`;
+      `  ${icon}  ${chalk.cyan(cmd.padEnd(pad))} ${chalk.dim('-')} ${desc}`;
 
-    // Agent Commands
-    helpText += chalk.bold.underline('\nAgent Commands') + '\n';
-    const agentCmdPad = Math.max(...commands.map(c => c.cmd.length)) + 2;
-    commands.forEach(c => helpText += formatCommand(c.icon, c.cmd, c.desc, agentCmdPad));
+    const printSection = (title: string, commands: { icon: string; cmd: string; desc: string }[]) => {
+      const longestCmd = Math.max(...commands.map(c => c.cmd.length));
+      const pad = longestCmd + 4;
 
-    // System Commands
-    helpText += chalk.bold.underline('\nSystem Commands') + '\n';
-    const sysCmdPad = Math.max(...systemCmds.map(c => c.cmd.length)) + 2;
-    systemCmds.forEach(c => helpText += formatCommand(c.icon, c.cmd, c.desc, sysCmdPad));
+      helpText += chalk.gray(`┌─ ${chalk.bold(title)} ` + '─'.repeat(BOX_WIDTH - title.length - 4) + '┐\n');
+      commands.forEach(c => {
+        const formatted = formatCommand(c.icon, c.cmd, c.desc, pad);
+        const padding = ' '.repeat(BOX_WIDTH - Buffer.byteLength(formatted.replace(/\u001b\[[0-9;]*m/g, '')) - 3);
+        helpText += chalk.gray('│') + `${formatted}${padding}` + chalk.gray('│\n');
+      });
+      helpText += chalk.gray('└' + '─'.repeat(BOX_WIDTH - 2) + '┘\n');
+    };
 
-    helpText += chalk.gray('─'.repeat(50)) + '\n';
-    helpText += chalk.dim('Or just type a message to chat with the default agent (Coder)\n');
+    printSection('Agent Commands', agentCommands);
+    helpText += '\n'; // Add space between sections
+    printSection('System Commands', systemCommands);
+
+    helpText += chalk.gray('─'.repeat(BOX_WIDTH)) + '\n';
+    helpText += chalk.dim('  💡 Or just type a message to chat with the default agent (Coder)\n');
 
     console.log(helpText);
   }
