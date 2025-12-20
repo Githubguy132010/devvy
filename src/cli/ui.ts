@@ -76,7 +76,7 @@ export class TerminalUI {
     let helpText = chalk.bold('\nAvailable Commands:\n');
 
     const formatCommand = (icon: string, cmd: string, desc: string, pad: number) =>
-      `  ${icon}  ${chalk.cyan(cmd.padEnd(pad))} - ${desc}\n`;
+      `  ${icon}  ${chalk.cyan(cmd.padEnd(pad))} - ${chalk.dim(desc)}\n`;
 
     // Agent Commands
     helpText += chalk.bold.underline('\nAgent Commands') + '\n';
