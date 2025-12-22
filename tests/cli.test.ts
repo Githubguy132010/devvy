@@ -17,6 +17,8 @@ mock.module('../src/cli/ui.js', () => ({
     printAgentStart: mock(() => {}),
     printChunk: mock(() => {}),
     printComplete: mock(() => {}),
+    startSpinner: mock(() => {}),
+    stopSpinner: mock(() => {}),
   },
 }));
 

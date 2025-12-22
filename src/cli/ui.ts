@@ -140,16 +140,23 @@ export class TerminalUI {
     console.log('\n');
   }
 
-  startSpinner(text: string): void {
+  startSpinner(text: string, agent?: AgentType): void {
     if (this.isClosed) return;
-    
+
     // Stop any existing spinner first
     if (this.currentSpinner) {
       this.currentSpinner.stop();
     }
-    
+
+    let spinnerText = text;
+    if (agent) {
+      const icon = AGENT_ICONS[agent];
+      const name = agent.charAt(0).toUpperCase() + agent.slice(1);
+      spinnerText = `${icon} ${chalk.bold(name)} is ${text.toLowerCase()}`;
+    }
+
     try {
-      this.currentSpinner = ora(text).start();
+      this.currentSpinner = ora(spinnerText).start();
     } catch (error) {
       logger.error('Error starting spinner', { error: error instanceof Error ? error.message : String(error) });
       this.currentSpinner = null;
