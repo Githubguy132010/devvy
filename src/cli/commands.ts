@@ -126,12 +126,23 @@ export class CommandHandler {
 
       logger.info(`Starting chat with agent: ${agent}`, { messageLength: message.length });
 
+      terminalUI.startSpinner('Thinking...', agent);
+      let thinking = true;
+
       terminalUI.printAgentStart(agent);
 
       for await (const event of orchestrator.runAgent(agent, message)) {
+        if (thinking) {
+          terminalUI.stopSpinner();
+          thinking = false;
+        }
         if (event.type === 'chunk') {
           terminalUI.printChunk(event.content);
         }
+      }
+
+      if (thinking) {
+        terminalUI.stopSpinner();
       }
 
       terminalUI.printComplete();
@@ -152,13 +163,24 @@ export class CommandHandler {
   private async runReviewCycle(): Promise<boolean> {
     try {
       terminalUI.printInfo('Starting review cycle...');
+      let thinking = false;
 
       for await (const event of orchestrator.runReviewCycle()) {
         if (event.phase === 'start') {
+          terminalUI.startSpinner('Thinking...', event.agent);
+          thinking = true;
           terminalUI.printAgentStart(event.agent);
         } else if (event.phase === 'chunk' && event.content) {
+          if (thinking) {
+            terminalUI.stopSpinner();
+            thinking = false;
+          }
           terminalUI.printChunk(event.content);
         } else if (event.phase === 'complete') {
+          if (thinking) {
+            terminalUI.stopSpinner();
+            thinking = false;
+          }
           terminalUI.printComplete();
 
           if (event.approved) {
@@ -179,13 +201,24 @@ export class CommandHandler {
     try {
       terminalUI.printInfo(`Starting brainstorm session on: ${topic}`);
       orchestrator.addUserMessage(`Let's brainstorm about: ${topic}`);
+      let thinking = false;
 
       for await (const event of orchestrator.brainstorm(topic)) {
         if (event.phase === 'start') {
+          terminalUI.startSpinner('Thinking...', event.agent);
+          thinking = true;
           terminalUI.printAgentStart(event.agent);
         } else if (event.phase === 'chunk' && event.content) {
+          if (thinking) {
+            terminalUI.stopSpinner();
+            thinking = false;
+          }
           terminalUI.printChunk(event.content);
         } else if (event.phase === 'complete') {
+          if (thinking) {
+            terminalUI.stopSpinner();
+            thinking = false;
+          }
           terminalUI.printComplete();
         }
       }
