@@ -18,14 +18,14 @@ export class ToolSpinner {
 
     succeed(message?: string): void {
         if (this.spinner) {
-            this.spinner.succeed(message);
+            this.spinner.succeed(message ? `✅ ${message}` : undefined);
             this.spinner = null;
         }
     }
 
     fail(message?: string): void {
         if (this.spinner) {
-            this.spinner.fail(message);
+            this.spinner.fail(message ? `❌ ${message}` : undefined);
             this.spinner = null;
         }
     }
