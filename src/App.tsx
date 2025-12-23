@@ -1,49 +1,57 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
+import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [messages, setMessages] = useState<string[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [prompt]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (prompt.trim()) {
+      setMessages((prev) => [...prev, prompt]);
+      setPrompt("");
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
+    }
   }
 
   return (
     <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+      <h1>Devvy</h1>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <div className="messages-container">
+        {messages.length === 0 ? (
+          <p className="placeholder">Send a message to get started...</p>
+        ) : (
+          messages.map((msg, index) => (
+            <div key={index} className="message">
+              <span className="message-content">{msg}</span>
+            </div>
+          ))
+        )}
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
+      <form className="prompt-form" onSubmit={handleSubmit}>
+        <textarea
+          ref={textareaRef}
+          id="prompt-input"
+          value={prompt}
+          onChange={(e) => setPrompt(e.currentTarget.value)}
+          placeholder="Type your message..."
+          rows={1}
         />
-        <button type="submit">Greet</button>
+        <button type="submit">Send</button>
       </form>
-      <p>{greetMsg}</p>
     </main>
   );
 }
