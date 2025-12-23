@@ -5,7 +5,7 @@
   font-weight: 400;
 
   color: #f6f6f6;
-  background-color: #2f2f2f;
+  background-color: #000000;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -16,26 +16,58 @@
 
 .container {
   margin: 0;
-  padding: 1rem;
+  padding: 0.5rem;
   height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  padding-bottom: 1rem;
+  position: relative;
 }
 
 h1 {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .messages-container {
-  flex: 1;
   width: 100%;
   max-width: 600px;
   overflow-y: auto;
-  margin-bottom: 1rem;
-  padding: 1rem;
+  margin-bottom: 0.25rem;
+  padding: 0.5rem;
+  scrollbar-width: thin !important; /* Firefox */
+  -ms-overflow-style: thin !important; /* IE and Edge */
+  height: calc(100vh - 100px); /* Fixed height to leave room for prompt */
+}
+
+.messages-container::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.messages-container::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+  background: #444444;
+  border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+  background: #666666;
+}
+
+/* Allow scrolling in messages container */
+.messages-container {
+  -ms-overflow-style: thin !important;
+  scrollbar-width: thin !important;
+}
+
+.messages-container::-webkit-scrollbar-track,
+.messages-container::-webkit-scrollbar-thumb {
+  border-radius: 3px;
 }
 
 .placeholder {
@@ -65,11 +97,13 @@ h1 {
   display: inline-block;
   padding: 0.75rem 1rem;
   border-radius: 12px;
-  background-color: #3a3a3a;
+  background-color: #1a1a1a;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   max-width: 100%;
   word-wrap: break-word;
   white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .prompt-form {
@@ -78,6 +112,10 @@ h1 {
   width: 100%;
   max-width: 600px;
   align-items: flex-end;
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 textarea,
@@ -89,7 +127,7 @@ button {
   font-weight: 500;
   font-family: inherit;
   color: #ffffff;
-  background-color: #3a3a3a;
+  background-color: #1a1a1a;
   transition: border-color 0.25s, box-shadow 0.25s;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   outline: none;
@@ -101,6 +139,12 @@ textarea {
   min-height: 48px;
   max-height: 200px;
   overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+textarea::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 textarea:focus {
@@ -120,5 +164,40 @@ button:hover {
 
 button:active {
   border-color: #5a9bff;
-  background-color: #4a4a4a;
+  background-color: #2a2a2a;
+}
+
+/* Hide scrollbars for main body but allow for scrollable content */
+html, body {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+  overflow: hidden !important; /* Prevent main scrollbar */
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Hide scrollbars for main layout elements but allow for content */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.container::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari and Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Only hide scrollbars for non-content elements */
+html *:not(.messages-container):not(textarea)::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Hide scrollbars globally except for specific scrollable elements */
+*:not(.messages-container):not(textarea) {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+*:not(.messages-container):not(textarea)::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari and Opera */
 }
