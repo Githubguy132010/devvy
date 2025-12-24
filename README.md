@@ -32,6 +32,17 @@ Devvy is a powerful desktop AI chat application built with Tauri, React, and Typ
 - Install: [ollama.ai](https://ollama.ai/)
 - No API key required - runs completely locally
 
+### Custom (OpenAI-Compatible)
+- Compatible with any OpenAI-compatible API:
+  - **LM Studio** - Run models locally with a simple UI
+  - **LocalAI** - Self-hosted OpenAI alternative
+  - **vLLM** - High-throughput inference server
+  - **Text Generation WebUI** - Popular model hosting
+  - **Jan** - Local AI assistant
+  - Any other OpenAI-compatible endpoint
+- Requires: API base URL and API key
+- Supports: Any model name
+
 ## Getting Started
 
 ### Prerequisites

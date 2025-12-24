@@ -125,6 +125,50 @@ This guide will help you set up and configure different LLM providers in Devvy.
    - ✅ No per-request costs
    - ✅ Faster responses (no network latency)
 
+### Custom (OpenAI-Compatible) Setup
+
+1. **What is it?**
+   - Allows you to connect to any OpenAI-compatible API
+   - Perfect for self-hosted solutions and alternative providers
+
+2. **Popular Options:**
+   - **LM Studio** ([lmstudio.ai](https://lmstudio.ai/)) - Easy local model hosting
+   - **LocalAI** ([localai.io](https://localai.io/)) - Self-hosted OpenAI alternative
+   - **vLLM** - High-performance inference server
+   - **Text Generation WebUI** - Community favorite for hosting models
+   - **Jan** ([jan.ai](https://jan.ai/)) - Local AI assistant
+   - **OpenRouter** - Access multiple providers through one API
+   - **Together AI** - Cloud-hosted alternative models
+
+3. **Example: LM Studio Setup:**
+   ```bash
+   # 1. Download and install LM Studio
+   # 2. Download a model (e.g., Mistral 7B)
+   # 3. Start the local server (default: http://localhost:1234)
+   ```
+
+4. **Configure Devvy:**
+   - Open Settings
+   - Select "Custom (OpenAI Compatible)" as provider
+   - Enter your API key (if required by your endpoint)
+   - Set API Base URL (e.g., `http://localhost:1234/v1`)
+   - Enter model name (e.g., `mistral-7b-instruct`)
+   - Adjust parameters as needed
+
+5. **Common Base URLs:**
+   - LM Studio: `http://localhost:1234/v1`
+   - LocalAI: `http://localhost:8080/v1`
+   - Text Gen WebUI: `http://localhost:5000/v1`
+   - OpenRouter: `https://openrouter.ai/api/v1`
+   - Together AI: `https://api.together.xyz/v1`
+
+6. **Benefits:**
+   - ✅ Use alternative providers not officially supported
+   - ✅ Self-host for complete control and privacy
+   - ✅ Access to diverse model selection
+   - ✅ Often more cost-effective than major providers
+   - ✅ No vendor lock-in
+
 ## Configuration Parameters
 
 ### Temperature
@@ -139,9 +183,11 @@ This guide will help you set up and configure different LLM providers in Devvy.
 - Controls the maximum length of the response
 - Higher values allow longer responses but may cost more (for paid APIs)
 
-### Base URL (Ollama only)
-- **Default:** http://localhost:11434
-- Change this if Ollama is running on a different host or port
+### Base URL
+- **Default (Ollama):** http://localhost:11434
+- **Default (Custom):** Depends on your provider
+- **Ollama:** Change if running on different host/port
+- **Custom:** Set to your provider's base URL (include `/v1` if needed)
 
 ## Troubleshooting
 
