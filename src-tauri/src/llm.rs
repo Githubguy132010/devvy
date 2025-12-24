@@ -96,6 +96,7 @@ struct AnthropicResponse {
 #[derive(Debug, Deserialize)]
 struct AnthropicContent {
     #[serde(rename = "type")]
+    #[allow(dead_code)]
     content_type: String,
     text: String,
 }
@@ -289,7 +290,7 @@ async fn send_anthropic_request(
         model,
         messages: anthropic_messages,
         temperature: config.temperature,
-        max_tokens: config.max_tokens.or(Some(4096)),
+        max_tokens: Some(config.max_tokens.unwrap_or(4096)),
     };
 
     let response = client
