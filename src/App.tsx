@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import "./App.css";
 
 interface Chat {
@@ -25,27 +26,42 @@ interface RenameDialogProps {
 }
 
 function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }: ConfirmDialogProps) {
-  if (!isOpen) return null;
-
   return (
-    <div className="dialog-overlay">
-      <div className="dialog">
-        <div className="dialog-header">
-          <h3>{title}</h3>
-        </div>
-        <div className="dialog-content">
-          <p>{message}</p>
-        </div>
-        <div className="dialog-actions">
-          <button className="dialog-btn dialog-btn-cancel" onClick={onCancel}>
-            Cancel
-          </button>
-          <button className="dialog-btn dialog-btn-confirm" onClick={onConfirm}>
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="dialog-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onCancel}
+        >
+          <motion.div
+            className="dialog"
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="dialog-header">
+              <h3>{title}</h3>
+            </div>
+            <div className="dialog-content">
+              <p>{message}</p>
+            </div>
+            <div className="dialog-actions">
+              <button className="dialog-btn dialog-btn-cancel" onClick={onCancel}>
+                Cancel
+              </button>
+              <button className="dialog-btn dialog-btn-confirm" onClick={onConfirm}>
+                Delete
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -70,84 +86,140 @@ function RenameDialog({ isOpen, currentTitle, onConfirm, onCancel }: RenameDialo
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="dialog-overlay" onClick={onCancel}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="dialog-header">
-          <h3>Rename Chat</h3>
-        </div>
-        <div className="dialog-content">
-          <input
-            type="text"
-            value={newTitle}
-            onChange={(e) => {
-              setNewTitle(e.target.value);
-              setError("");
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter new chat name..."
-            autoFocus
-          />
-          {error && <p className="dialog-error">{error}</p>}
-        </div>
-        <div className="dialog-actions">
-          <button className="dialog-btn dialog-btn-cancel" onClick={onCancel}>
-            Cancel
-          </button>
-          <button className="dialog-btn dialog-btn-save" onClick={handleSave}>
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="dialog-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onCancel}
+        >
+          <motion.div
+            className="dialog"
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="dialog-header">
+              <h3>Rename Chat</h3>
+            </div>
+            <div className="dialog-content">
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => {
+                  setNewTitle(e.target.value);
+                  setError("");
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="Enter new chat name..."
+                autoFocus
+              />
+              {error && <p className="dialog-error">{error}</p>}
+            </div>
+            <div className="dialog-actions">
+              <button className="dialog-btn dialog-btn-cancel" onClick={onCancel}>
+                Cancel
+              </button>
+              <button className="dialog-btn dialog-btn-save" onClick={handleSave}>
+                Save
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
 function Settings() {
   return (
-    <div className="settings-container">
+    <motion.div
+      className="settings-container"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+    >
       <h1>Settings</h1>
 
-      <div className="settings-section">
+      <motion.div
+        className="settings-section"
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+      >
         <h2>Chat</h2>
-        <div className="setting-item">
+        <motion.div
+          className="setting-item"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+        >
           <label>
             <span className="setting-label">Default Chat Name</span>
             <input type="text" className="setting-input" defaultValue="New Chat" />
           </label>
-        </div>
-        <div className="setting-item">
+        </motion.div>
+        <motion.div
+          className="setting-item"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
           <label className="setting-checkbox-label">
             <input type="checkbox" defaultChecked />
             <span className="setting-label">Auto-generate chat titles</span>
           </label>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
-      <div className="settings-section">
+      <motion.div
+        className="settings-section"
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: 0.25 }}
+      >
         <h2>Keyboard Shortcuts</h2>
         <div className="shortcut-list">
-          <div className="shortcut-item">
+          <motion.div
+            className="shortcut-item"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+          >
             <span className="shortcut-action">Send message</span>
             <span className="shortcut-key">Enter</span>
-          </div>
-          <div className="shortcut-item">
+          </motion.div>
+          <motion.div
+            className="shortcut-item"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.35 }}
+          >
             <span className="shortcut-action">New line</span>
             <span className="shortcut-key">Ctrl + Enter</span>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="settings-section">
+      <motion.div
+        className="settings-section"
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: 0.4 }}
+      >
         <h2>About</h2>
         <div className="about-info">
           <p>Devvy v1.0.0</p>
           <p>A Tauri-powered desktop application</p>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -294,95 +366,192 @@ function App() {
   return (
     <main className="container">
       <aside className="sidebar">
-        <div className="sidebar-header">
-          <button className="new-chat-btn" onClick={createNewChat}>
+        <motion.div
+          className="sidebar-header"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <motion.button
+            className="new-chat-btn"
+            onClick={createNewChat}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
             + New Chat
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
         <div className="chat-history">
-          {chats.map(chat => (
-            <div
-              key={chat.id}
-              className={`chat-item ${chat.id === currentChatId ? 'active' : ''}`}
-              onClick={() => switchChat(chat.id)}
-            >
-              <span className="chat-title">{chat.title || generateChatTitle(chat.messages)}</span>
-              <div className="chat-actions">
-                <button
-                  className="rename-chat-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    renameChat(chat.id);
-                  }}
-                  title="Rename chat"
-                >
-                  ✏
-                </button>
-                <button
-                  className="delete-chat-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteChat(chat.id);
-                  }}
-                  title="Delete chat"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          ))}
+          <AnimatePresence>
+            {chats.map((chat, index) => (
+              <motion.div
+                key={chat.id}
+                layout
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20, scale: 0.9 }}
+                transition={{
+                  duration: 0.2,
+                  delay: index * 0.05
+                }}
+                className={`chat-item ${chat.id === currentChatId ? 'active' : ''}`}
+                onClick={() => switchChat(chat.id)}
+                whileHover={{ x: 4 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <span className="chat-title">{chat.title || generateChatTitle(chat.messages)}</span>
+                <div className="chat-actions">
+                  <motion.button
+                    className="rename-chat-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      renameChat(chat.id);
+                    }}
+                    title="Rename chat"
+                    whileHover={{ scale: 1.2 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    ✏
+                  </motion.button>
+                  <motion.button
+                    className="delete-chat-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteChat(chat.id);
+                    }}
+                    title="Delete chat"
+                    whileHover={{ scale: 1.2, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    ×
+                  </motion.button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
-        <div className="sidebar-footer">
-          <button
+        <motion.div
+          className="sidebar-footer"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
+          <motion.button
             className={`settings-btn ${currentView === 'settings' ? 'active' : ''}`}
             onClick={() => setCurrentView(currentView === 'settings' ? 'chat' : 'settings')}
             title="Settings"
+            whileHover={{ scale: 1.1, rotate: 30 }}
+            whileTap={{ scale: 0.9 }}
           >
             ⚙
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </aside>
 
       <div className="main-content">
-        {currentView === 'settings' ? (
-          <Settings />
-        ) : (
-          <>
-            <h1>Devvy</h1>
+        <AnimatePresence mode="wait">
+          {currentView === 'settings' ? (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+            >
+              <Settings />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="chat"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="chat-view"
+            >
+              <motion.h1
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                Devvy
+              </motion.h1>
 
-            <div className="messages-container">
-              {!currentChatId ? (
-                <p className="placeholder">Select a chat or create a new one to get started...</p>
-              ) : currentMessages.length === 0 ? (
-                <p className="placeholder">Send a message to get started...</p>
-              ) : (
-                currentMessages.map((msg, index) => (
-                  <div key={index} className="message">
-                    <span className="message-content">{msg}</span>
-                  </div>
-                ))
-              )}
-            </div>
+              <div className="messages-container">
+                {!currentChatId ? (
+                  <motion.p
+                    className="placeholder"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                  >
+                    Select a chat or create a new one to get started...
+                  </motion.p>
+                ) : currentMessages.length === 0 ? (
+                  <motion.p
+                    className="placeholder"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                  >
+                    Send a message to get started...
+                  </motion.p>
+                ) : (
+                  <AnimatePresence initial={false}>
+                    {currentMessages.map((msg, index) => (
+                      <motion.div
+                        key={index}
+                        layout
+                        initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                        transition={{
+                          duration: 0.25,
+                          delay: index * 0.05,
+                          layout: { duration: 0.2 }
+                        }}
+                        className="message"
+                      >
+                        <span className="message-content">{msg}</span>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                )}
+              </div>
 
-            <form className="prompt-form" onSubmit={handleSubmit}>
-              <textarea
-                ref={textareaRef}
-                id="prompt-input"
-                value={prompt}
-                onChange={(e) => setPrompt(e.currentTarget.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Type your message..."
-                rows={1}
-              />
-              <button type="submit" className="send-btn">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="22" y1="2" x2="11" y2="13"></line>
-    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-  </svg>
-</button>
-            </form>
-          </>
-        )}
+              <div className="prompt-form-wrapper">
+                <motion.form
+                  className="prompt-form"
+                  onSubmit={handleSubmit}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                >
+                  <textarea
+                    ref={textareaRef}
+                    id="prompt-input"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.currentTarget.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type your message..."
+                    rows={1}
+                  />
+                  <motion.button
+                    type="submit"
+                    className="send-btn"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </motion.button>
+                </motion.form>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <ConfirmDialog

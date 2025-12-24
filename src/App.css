@@ -400,17 +400,21 @@ h1 {
   word-break: break-word;
 }
 
-.prompt-form {
-  display: flex;
-  gap: 0.5rem;
-  width: 100%;
-  max-width: 600px;
-  align-items: flex-end;
+.prompt-form-wrapper {
   position: absolute;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
+  width: 100%;
+  max-width: 600px;
+}
+
+.prompt-form {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  align-items: flex-end;
 }
 
 textarea,
