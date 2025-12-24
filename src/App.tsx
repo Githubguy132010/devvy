@@ -15,6 +15,8 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
+type View = 'chat' | 'settings';
+
 interface RenameDialogProps {
   isOpen: boolean;
   currentTitle: string;
@@ -103,7 +105,54 @@ function RenameDialog({ isOpen, currentTitle, onConfirm, onCancel }: RenameDialo
   );
 }
 
+function Settings() {
+  return (
+    <div className="settings-container">
+      <h1>Settings</h1>
+
+      <div className="settings-section">
+        <h2>Chat</h2>
+        <div className="setting-item">
+          <label>
+            <span className="setting-label">Default Chat Name</span>
+            <input type="text" className="setting-input" defaultValue="New Chat" />
+          </label>
+        </div>
+        <div className="setting-item">
+          <label className="setting-checkbox-label">
+            <input type="checkbox" defaultChecked />
+            <span className="setting-label">Auto-generate chat titles</span>
+          </label>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <h2>Keyboard Shortcuts</h2>
+        <div className="shortcut-list">
+          <div className="shortcut-item">
+            <span className="shortcut-action">Send message</span>
+            <span className="shortcut-key">Enter</span>
+          </div>
+          <div className="shortcut-item">
+            <span className="shortcut-action">New line</span>
+            <span className="shortcut-key">Ctrl + Enter</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <h2>About</h2>
+        <div className="about-info">
+          <p>Devvy v1.0.0</p>
+          <p>A Tauri-powered desktop application</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
+  const [currentView, setCurrentView] = useState<View>('chat');
   const [prompt, setPrompt] = useState("");
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -282,42 +331,57 @@ function App() {
             </div>
           ))}
         </div>
+        <div className="sidebar-footer">
+          <button
+            className={`settings-btn ${currentView === 'settings' ? 'active' : ''}`}
+            onClick={() => setCurrentView(currentView === 'settings' ? 'chat' : 'settings')}
+            title="Settings"
+          >
+            ⚙ Settings
+          </button>
+        </div>
       </aside>
 
       <div className="main-content">
-        <h1>Devvy</h1>
+        {currentView === 'settings' ? (
+          <Settings />
+        ) : (
+          <>
+            <h1>Devvy</h1>
 
-        <div className="messages-container">
-          {!currentChatId ? (
-            <p className="placeholder">Select a chat or create a new one to get started...</p>
-          ) : currentMessages.length === 0 ? (
-            <p className="placeholder">Send a message to get started...</p>
-          ) : (
-            currentMessages.map((msg, index) => (
-              <div key={index} className="message">
-                <span className="message-content">{msg}</span>
-              </div>
-            ))
-          )}
-        </div>
+            <div className="messages-container">
+              {!currentChatId ? (
+                <p className="placeholder">Select a chat or create a new one to get started...</p>
+              ) : currentMessages.length === 0 ? (
+                <p className="placeholder">Send a message to get started...</p>
+              ) : (
+                currentMessages.map((msg, index) => (
+                  <div key={index} className="message">
+                    <span className="message-content">{msg}</span>
+                  </div>
+                ))
+              )}
+            </div>
 
-        <form className="prompt-form" onSubmit={handleSubmit}>
-          <textarea
-            ref={textareaRef}
-            id="prompt-input"
-            value={prompt}
-            onChange={(e) => setPrompt(e.currentTarget.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message..."
-            rows={1}
-          />
-          <button type="submit" className="send-btn">
+            <form className="prompt-form" onSubmit={handleSubmit}>
+              <textarea
+                ref={textareaRef}
+                id="prompt-input"
+                value={prompt}
+                onChange={(e) => setPrompt(e.currentTarget.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message..."
+                rows={1}
+              />
+              <button type="submit" className="send-btn">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="22" y1="2" x2="11" y2="13"></line>
     <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
   </svg>
 </button>
-        </form>
+            </form>
+          </>
+        )}
       </div>
 
       <ConfirmDialog
