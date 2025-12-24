@@ -204,6 +204,7 @@ pub async fn send_llm_request(
         "anthropic" => send_anthropic_request(config, messages).await,
         "google" => send_google_request(config, messages).await,
         "ollama" => send_ollama_request(config, messages).await,
+        "custom" => send_custom_openai_request(config, messages).await,
         _ => Err(format!("Unsupported provider: {}", config.provider).into()),
     }
 }
@@ -451,5 +452,64 @@ async fn send_ollama_request(
         content: ollama_response.message.content,
         model: Some(model),
         usage: None,
+    })
+}
+
+async fn send_custom_openai_request(
+    config: LLMConfig,
+    messages: Vec<LLMMessage>,
+) -> Result<LLMResponse, Box<dyn Error>> {
+    let api_key = config.api_key.ok_or("API key is required for custom provider")?;
+    let model = config.model.unwrap_or_else(|| "gpt-3.5-turbo".to_string());
+    let base_url = config.base_url.ok_or("Base URL is required for custom provider")?;
+
+    let client = reqwest::Client::new();
+    let request_body = OpenAIRequest {
+        model,
+        messages: messages
+            .into_iter()
+            .map(|m| OpenAIMessage {
+                role: m.role,
+                content: m.content,
+            })
+            .collect(),
+        temperature: config.temperature,
+        max_tokens: config.max_tokens,
+        stream: Some(false),
+    };
+
+    let response = client
+        .post(format!("{}/chat/completions", base_url))
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&request_body)
+        .send()
+        .await?;
+
+    let status = response.status();
+    let text = response.text().await?;
+
+    if !status.is_success() {
+        return Err(format!("Custom provider API error ({}): {}", status, text).into());
+    }
+
+    let openai_response: OpenAIResponse = serde_json::from_str(&text)?;
+
+    let content = openai_response
+        .choices
+        .first()
+        .ok_or("No response from custom provider")?
+        .message
+        .content
+        .clone();
+
+    Ok(LLMResponse {
+        content,
+        model: openai_response.model,
+        usage: openai_response.usage.map(|u| Usage {
+            prompt_tokens: u.prompt_tokens,
+            completion_tokens: u.completion_tokens,
+            total_tokens: u.total_tokens,
+        }),
     })
 }

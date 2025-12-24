@@ -52,6 +52,8 @@ export function getDefaultModel(provider: string): string {
       return "gemini-2.0-flash-exp";
     case "ollama":
       return "llama3.2";
+    case "custom":
+      return "gpt-3.5-turbo";
     default:
       return "gpt-4o";
   }
@@ -96,6 +98,8 @@ export function getAvailableModels(provider: string): string[] {
         "phi3",
         "qwen2.5",
       ];
+    case "custom":
+      return []; // User can enter any model name
     default:
       return [];
   }
@@ -106,6 +110,13 @@ export function getAvailableModels(provider: string): string[] {
  */
 export function requiresApiKey(provider: string): boolean {
   return provider !== "ollama";
+}
+
+/**
+ * Check if a provider requires a base URL
+ */
+export function requiresBaseUrl(provider: string): boolean {
+  return provider === "ollama" || provider === "custom";
 }
 
 /**
@@ -121,7 +132,29 @@ export function getProviderDisplayName(provider: string): string {
       return "Google (Gemini)";
     case "ollama":
       return "Ollama (Local)";
+    case "custom":
+      return "Custom (OpenAI Compatible)";
     default:
       return provider;
+  }
+}
+
+/**
+ * Get provider icon path
+ */
+export function getProviderIcon(provider: string): string {
+  switch (provider) {
+    case "openai":
+      return "/openai.svg";
+    case "anthropic":
+      return "/anthropic.svg";
+    case "google":
+      return "/google.svg";
+    case "ollama":
+      return "/ollama.svg";
+    case "custom":
+      return "/custom.svg";
+    default:
+      return "/custom.svg";
   }
 }

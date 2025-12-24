@@ -3,7 +3,7 @@ export type MessageRole = 'user' | 'assistant' | 'system';
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 export type BranchStatus = 'active' | 'inactive' | 'merged';
 export type View = 'chat' | 'settings';
-export type LLMProvider = 'openai' | 'anthropic' | 'google' | 'ollama';
+export type LLMProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'custom';
 
 // LLM Provider Types
 export interface LLMConfig {

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { LLMConfig, LLMProvider } from "../../types";
-import { getAvailableModels, getProviderDisplayName, requiresApiKey } from "../../services/llmService";
+import { getAvailableModels, getProviderDisplayName, requiresApiKey, requiresBaseUrl, getProviderIcon } from "../../services/llmService";
 
 export interface SettingsProps {
   llmConfig: LLMConfig;
@@ -8,7 +8,7 @@ export interface SettingsProps {
 }
 
 export function Settings({ llmConfig, onConfigChange }: SettingsProps) {
-  const providers: LLMProvider[] = ["openai", "anthropic", "google", "ollama"];
+  const providers: LLMProvider[] = ["openai", "anthropic", "google", "ollama", "custom"];
 
   const handleProviderChange = (provider: LLMProvider) => {
     onConfigChange({
@@ -92,6 +92,16 @@ export function Settings({ llmConfig, onConfigChange }: SettingsProps) {
               ))}
             </select>
           </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+            <img 
+              src={getProviderIcon(llmConfig.provider)} 
+              alt={llmConfig.provider}
+              style={{ width: '24px', height: '24px', opacity: 0.8 }}
+            />
+            <span style={{ fontSize: '0.9em', opacity: 0.7 }}>
+              {getProviderDisplayName(llmConfig.provider)}
+            </span>
+          </div>
         </motion.div>
 
         {requiresApiKey(llmConfig.provider) && (
@@ -122,18 +132,28 @@ export function Settings({ llmConfig, onConfigChange }: SettingsProps) {
         >
           <label>
             <span className="setting-label">Model</span>
-            <select
-              className="setting-input"
-              value={llmConfig.model || ""}
-              onChange={(e) => handleModelChange(e.target.value)}
-            >
-              <option value="">Default</option>
-              {getAvailableModels(llmConfig.provider).map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
-            </select>
+            {llmConfig.provider === "custom" ? (
+              <input
+                type="text"
+                className="setting-input"
+                value={llmConfig.model || ""}
+                onChange={(e) => handleModelChange(e.target.value)}
+                placeholder="e.g., gpt-3.5-turbo"
+              />
+            ) : (
+              <select
+                className="setting-input"
+                value={llmConfig.model || ""}
+                onChange={(e) => handleModelChange(e.target.value)}
+              >
+                <option value="">Default</option>
+                {getAvailableModels(llmConfig.provider).map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
         </motion.div>
 
@@ -178,7 +198,7 @@ export function Settings({ llmConfig, onConfigChange }: SettingsProps) {
           </label>
         </motion.div>
 
-        {llmConfig.provider === "ollama" && (
+        {requiresBaseUrl(llmConfig.provider) && (
           <motion.div
             className="setting-item"
             initial={{ opacity: 0, x: -10 }}
@@ -186,15 +206,22 @@ export function Settings({ llmConfig, onConfigChange }: SettingsProps) {
             transition={{ duration: 0.3, delay: 0.4 }}
           >
             <label>
-              <span className="setting-label">Base URL</span>
+              <span className="setting-label">
+                {llmConfig.provider === "custom" ? "API Base URL" : "Base URL"}
+              </span>
               <input
                 type="text"
                 className="setting-input"
                 value={llmConfig.baseUrl || ""}
                 onChange={(e) => handleBaseUrlChange(e.target.value)}
-                placeholder="http://localhost:11434"
+                placeholder={llmConfig.provider === "custom" ? "https://api.example.com/v1" : "http://localhost:11434"}
               />
             </label>
+            {llmConfig.provider === "custom" && (
+              <p style={{ fontSize: '0.85em', opacity: 0.6, marginTop: '4px' }}>
+                For OpenAI-compatible APIs (e.g., LM Studio, LocalAI, vLLM, etc.)
+              </p>
+            )}
           </motion.div>
         )}
       </motion.div>
