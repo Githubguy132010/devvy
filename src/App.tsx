@@ -11,10 +11,13 @@ import { ChatView } from "./components/layout/ChatView";
 import { ToastContainer } from "./components/common/ToastContainer";
 
 // Types
-import { Chat, Message } from "./types";
+import { Chat, Message, LLMConfig, LLMMessage } from "./types";
 
 // Utils
 import { generateTimestamp } from "./utils/time";
+
+// Services
+import { LLMService, getDefaultModel } from "./services/llmService";
 
 // Hooks
 import { useToast } from "./hooks/useToast";
@@ -28,6 +31,15 @@ function App() {
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; chatId: string | null }>({ isOpen: false, chatId: null });
   const [renameDialog, setRenameDialog] = useState<{ isOpen: boolean; chatId: string | null }>({ isOpen: false, chatId: null });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // LLM Configuration
+  const [llmConfig, setLlmConfig] = useState<LLMConfig>({
+    provider: "openai",
+    model: getDefaultModel("openai"),
+    temperature: 0.7,
+    maxTokens: 4096,
+  });
+  const [llmService, setLlmService] = useState<LLMService>(new LLMService(llmConfig));
 
   // Split view state
   const [showSplitView, setShowSplitView] = useState(false);
@@ -52,6 +64,11 @@ function App() {
     mergeBranch,
   } = useMessageBranching(currentChatId || "");
 
+  // Update LLM service when config changes
+  useEffect(() => {
+    setLlmService(new LLMService(llmConfig));
+  }, [llmConfig]);
+
   // Auto-resize textarea
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -71,29 +88,36 @@ function App() {
     };
   }
 
-  // Simulate AI response (placeholder - replace with actual API call)
-  async function simulateAIResponse(userMessage: string): Promise<string> {
+  // Get LLM response using real API
+  async function getLLMResponse(messages: Message[]): Promise<string> {
     setIsGenerating(true);
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+    try {
+      // Convert messages to LLM format
+      const llmMessages: LLMMessage[] = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
 
-    // Simple response logic
-    const responses = [
-      `I understand you're asking about "${userMessage}". Let me help you with that.`,
-      `Great question! Here's what I think about "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}"`,
-      `Regarding "${userMessage.substring(0, 40)}${userMessage.length > 40 ? '...' : ''}", I'd suggest the following approach...`,
-    ];
+      const response = await llmService.sendMessage(llmMessages);
+      
+      // If response contains code blocks, extract and set code panel content
+      const codeBlockRegex = /```[\s\S]*?```/g;
+      const codeBlocks = response.content.match(codeBlockRegex);
+      if (codeBlocks && codeBlocks.length > 0) {
+        // Remove the backticks and language identifier
+        const cleanCode = codeBlocks[0].replace(/```(\w+)?\n?/, '').replace(/```$/, '');
+        setCodePanelContent(cleanCode);
+      }
 
-    const response = responses[Math.floor(Math.random() * responses.length)];
-
-    // If it's a code request, add some code
-    if (userMessage.toLowerCase().includes('code') || userMessage.toLowerCase().includes('example')) {
-      setCodePanelContent(`// Example code\n\nfunction example() {\n  // Your code here\n  return "Hello, World!";\n}\n\nconsole.log(example());`);
+      setIsGenerating(false);
+      return response.content;
+    } catch (error) {
+      setIsGenerating(false);
+      const errorMessage = error instanceof Error ? error.message : "Failed to get response from LLM";
+      showToast(errorMessage, "error", 5000);
+      throw error;
     }
-
-    setIsGenerating(false);
-    return response;
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -110,9 +134,27 @@ function App() {
         };
         setChats([newChat]);
         setCurrentChatId(newChat.id);
+
+        // Get LLM response
+        getLLMResponse([newMessage]).then(response => {
+          const aiMessage = convertToMessage(response, 'assistant');
+          setChats(prev => prev.map(chat =>
+            chat.id === newChat.id
+              ? {
+                  ...chat,
+                  messages: [...chat.messages, aiMessage],
+                }
+              : chat
+          ));
+        }).catch(error => {
+          console.error("Failed to get LLM response:", error);
+        });
       } else {
         // Add user message to existing chat
         const newMessage = convertToMessage(prompt, 'user');
+        const chat = chats.find(c => c.id === currentChatId);
+        if (!chat) return;
+
         setChats(prev => prev.map(chat =>
           chat.id === currentChatId
             ? {
@@ -122,8 +164,11 @@ function App() {
             : chat
         ));
 
-        // Simulate AI response
-        simulateAIResponse(prompt).then(response => {
+        // Build message history for context
+        const messageHistory = [...chat.messages.filter((m): m is Message => typeof m !== 'string'), newMessage];
+
+        // Get LLM response
+        getLLMResponse(messageHistory).then(response => {
           const aiMessage = convertToMessage(response, 'assistant');
           setChats(prev => prev.map(chat =>
             chat.id === currentChatId
@@ -133,6 +178,8 @@ function App() {
                 }
               : chat
           ));
+        }).catch(error => {
+          console.error("Failed to get LLM response:", error);
         });
       }
 
@@ -258,11 +305,12 @@ function App() {
     const messageIndex = chat.messages.findIndex((m: any) => m.id === messageId);
     if (messageIndex === -1) return;
 
-    const previousMessage = messageIndex > 0 ? chat.messages[messageIndex - 1] as Message : null;
+    // Get all messages up to (but not including) the message being regenerated
+    const messagesUpToRegenerate = chat.messages.slice(0, messageIndex).filter((m): m is Message => typeof m !== 'string');
 
-    if (previousMessage && previousMessage.role === 'user') {
-      // Regenerate response based on previous user message
-      simulateAIResponse(previousMessage.content).then(response => {
+    if (messagesUpToRegenerate.length > 0) {
+      // Regenerate response based on message history
+      getLLMResponse(messagesUpToRegenerate).then(response => {
         const regeneratedMessage = convertToMessage(response, 'assistant');
         regeneratedMessage.id = messageId; // Keep same ID to replace
 
@@ -278,6 +326,8 @@ function App() {
         ));
 
         showToast("Response regenerated", "success");
+      }).catch(error => {
+        console.error("Failed to regenerate message:", error);
       });
     }
   };
@@ -335,7 +385,7 @@ function App() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25 }}
             >
-              <Settings />
+              <Settings llmConfig={llmConfig} onConfigChange={setLlmConfig} />
             </motion.div>
           ) : (
             <ChatView

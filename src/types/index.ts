@@ -3,6 +3,32 @@ export type MessageRole = 'user' | 'assistant' | 'system';
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 export type BranchStatus = 'active' | 'inactive' | 'merged';
 export type View = 'chat' | 'settings';
+export type LLMProvider = 'openai' | 'anthropic' | 'google' | 'ollama';
+
+// LLM Provider Types
+export interface LLMConfig {
+  provider: LLMProvider;
+  apiKey?: string;
+  model?: string;
+  baseUrl?: string; // For Ollama or custom endpoints
+  temperature?: number;
+  maxTokens?: number;
+}
+
+export interface LLMMessage {
+  role: MessageRole;
+  content: string;
+}
+
+export interface LLMResponse {
+  content: string;
+  model?: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
 
 // Hook Return Types
 export interface UseToastReturn {
