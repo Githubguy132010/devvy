@@ -25,6 +25,32 @@ function App() {
     }
   }
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        // Shift+Enter - allow default behavior (new line)
+        return;
+      } else if (e.ctrlKey || e.metaKey) {
+        // Ctrl+Enter or Cmd+Enter - manually insert newline
+        e.preventDefault();
+        const textarea = e.currentTarget;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const newValue = prompt.substring(0, start) + '\n' + prompt.substring(end);
+        setPrompt(newValue);
+        
+        // Set cursor position after the newline
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + 1;
+        }, 0);
+      } else {
+        // Enter alone - send message
+        e.preventDefault();
+        handleSubmit(e as any);
+      }
+    }
+  }
+
   return (
     <main className="container">
       <h1>Devvy</h1>
@@ -47,6 +73,7 @@ function App() {
           id="prompt-input"
           value={prompt}
           onChange={(e) => setPrompt(e.currentTarget.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Type your message..."
           rows={1}
         />
