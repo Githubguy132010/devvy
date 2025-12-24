@@ -120,6 +120,34 @@ h1 {
   color: #ff6666;
 }
 
+.chat-actions {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.rename-chat-btn {
+  background: none;
+  border: none;
+  color: #888888;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+
+.chat-item:hover .rename-chat-btn {
+  opacity: 1;
+}
+
+.rename-chat-btn:hover {
+  background-color: #3a3a3a;
+  color: #5a9bff;
+}
+
 /* Main Content Styles */
 .main-content {
   flex: 1;
@@ -355,13 +383,45 @@ html *:not(.messages-container):not(textarea)::-webkit-scrollbar {
 }
 
 .dialog-content {
-  padding: 1rem 1.5rem;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .dialog-content p {
-  margin: 0;
+  margin: 0 0 1rem 0;
   color: #cccccc;
   line-height: 1.5;
+}
+
+.dialog-content p:last-child {
+  margin-bottom: 0;
+}
+
+.dialog-error {
+  color: #ff6666;
+  font-size: 0.875rem;
+  margin-top: 0.5rem !important;
+}
+
+.dialog-content input {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.75rem 1rem;
+  background-color: #0a0a0a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #f6f6f6;
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+  text-align: center;
+}
+
+.dialog-content input:focus {
+  border-color: #5a9bff;
 }
 
 .dialog-actions {
@@ -369,6 +429,19 @@ html *:not(.messages-container):not(textarea)::-webkit-scrollbar {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
+  border-top: 1px solid #2a2a2a;
+}
+
+.dialog-btn-save {
+  background-color: #5a9bff;
+  border-color: #5a9bff;
+  color: #ffffff;
+}
+
+.dialog-btn-save:hover {
+  background-color: #4a8cef;
+  border-color: #4a8cef;
+  transform: scale(1.02);
 }
 
 .dialog-btn {

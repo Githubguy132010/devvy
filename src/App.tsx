@@ -15,6 +15,13 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
+interface RenameDialogProps {
+  isOpen: boolean;
+  currentTitle: string;
+  onConfirm: (newTitle: string) => void;
+  onCancel: () => void;
+}
+
 function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }: ConfirmDialogProps) {
   if (!isOpen) return null;
 
@@ -40,11 +47,68 @@ function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }: ConfirmD
   );
 }
 
+function RenameDialog({ isOpen, currentTitle, onConfirm, onCancel }: RenameDialogProps) {
+  const [newTitle, setNewTitle] = useState(currentTitle);
+  const [error, setError] = useState("");
+
+  const handleSave = () => {
+    if (!newTitle.trim()) {
+      setError("Please enter a chat name");
+      return;
+    }
+    onConfirm(newTitle.trim());
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === "Escape") {
+      onCancel();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="dialog-overlay" onClick={onCancel}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="dialog-header">
+          <h3>Rename Chat</h3>
+        </div>
+        <div className="dialog-content">
+          <input
+            type="text"
+            value={newTitle}
+            onChange={(e) => {
+              setNewTitle(e.target.value);
+              setError("");
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="Enter new chat name..."
+            autoFocus
+          />
+          {error && <p className="dialog-error">{error}</p>}
+        </div>
+        <div className="dialog-actions">
+          <button className="dialog-btn dialog-btn-cancel" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="dialog-btn dialog-btn-save" onClick={handleSave}>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [prompt, setPrompt] = useState("");
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; chatId: string | null }>({ isOpen: false, chatId: null });
+  const [renameDialog, setRenameDialog] = useState<{ isOpen: boolean; chatId: string | null }>({ isOpen: false, chatId: null });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -118,6 +182,28 @@ function App() {
     setDeleteDialog({ isOpen: false, chatId: null });
   }
 
+  function renameChat(chatId: string) {
+    setRenameDialog({
+      isOpen: true,
+      chatId: chatId
+    });
+  }
+
+  function confirmRenameChat(newTitle: string) {
+    if (renameDialog.chatId) {
+      setChats(prev => prev.map(chat =>
+        chat.id === renameDialog.chatId
+          ? { ...chat, title: newTitle }
+          : chat
+      ));
+    }
+    setRenameDialog({ isOpen: false, chatId: null });
+  }
+
+  function cancelRenameChat() {
+    setRenameDialog({ isOpen: false, chatId: null });
+  }
+
   function generateChatTitle(messages: string[]): string {
     if (messages.length === 0) return "New Chat";
     const firstMessage = messages[0];
@@ -152,7 +238,8 @@ function App() {
 
   const currentChat = chats.find(chat => chat.id === currentChatId);
   const currentMessages = currentChat?.messages || [];
-  const deleteChatTitle = deleteDialog.chatId ? generateChatTitle(chats.find(c => c.id === deleteDialog.chatId)?.messages || []) : "";
+  const deleteChatTitle = deleteDialog.chatId ? chats.find(c => c.id === deleteDialog.chatId)?.title || "" : "";
+  const renameChatTitle = renameDialog.chatId ? chats.find(c => c.id === renameDialog.chatId)?.title || "" : "";
 
   return (
     <main className="container">
@@ -164,21 +251,34 @@ function App() {
         </div>
         <div className="chat-history">
           {chats.map(chat => (
-            <div 
-              key={chat.id} 
+            <div
+              key={chat.id}
               className={`chat-item ${chat.id === currentChatId ? 'active' : ''}`}
               onClick={() => switchChat(chat.id)}
             >
-              <span className="chat-title">{generateChatTitle(chat.messages)}</span>
-              <button 
-                className="delete-chat-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteChat(chat.id);
-                }}
-              >
-                ×
-              </button>
+              <span className="chat-title">{chat.title || generateChatTitle(chat.messages)}</span>
+              <div className="chat-actions">
+                <button
+                  className="rename-chat-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    renameChat(chat.id);
+                  }}
+                  title="Rename chat"
+                >
+                  ✏
+                </button>
+                <button
+                  className="delete-chat-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteChat(chat.id);
+                  }}
+                  title="Delete chat"
+                >
+                  ×
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -219,13 +319,20 @@ function App() {
 </button>
         </form>
       </div>
-      
+
       <ConfirmDialog
         isOpen={deleteDialog.isOpen}
         title="Delete Chat"
         message={`Are you sure you want to delete "${deleteChatTitle}"? This action cannot be undone.`}
         onConfirm={confirmDeleteChat}
         onCancel={cancelDeleteChat}
+      />
+
+      <RenameDialog
+        isOpen={renameDialog.isOpen}
+        currentTitle={renameChatTitle}
+        onConfirm={confirmRenameChat}
+        onCancel={cancelRenameChat}
       />
     </main>
   );
