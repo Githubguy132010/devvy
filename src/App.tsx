@@ -204,6 +204,7 @@ function App() {
     };
     setChats(prev => [newChat, ...prev]);
     setCurrentChatId(newChat.id);
+    setCurrentView('chat');
   }
 
   function switchChat(chatId: string) {
@@ -337,7 +338,7 @@ function App() {
             onClick={() => setCurrentView(currentView === 'settings' ? 'chat' : 'settings')}
             title="Settings"
           >
-            ⚙ Settings
+            ⚙
           </button>
         </div>
       </aside>
