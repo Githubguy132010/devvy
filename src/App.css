@@ -587,7 +587,6 @@ h1 {
   box-shadow: var(--glass-shadow-light);
   max-width: 100%;
   word-wrap: break-word;
-  white-space: pre-wrap;
   overflow-wrap: break-word;
   word-break: break-word;
   position: relative;
@@ -602,6 +601,28 @@ h1 {
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(90, 155, 255, 0.2), transparent);
   border-radius: 16px 16px 0 0;
+}
+
+.message-content p {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.message-content p:first-child {
+  margin-top: 0;
+}
+
+.message-content p:last-child {
+  margin-bottom: 0;
+}
+
+.message-content code:not(pre code) {
+  background: rgba(90, 155, 255, 0.15);
+  color: #5a9bff;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9em;
 }
 
 .prompt-form-wrapper {
@@ -1014,24 +1035,20 @@ html *:not(.messages-container):not(textarea)::-webkit-scrollbar {
 /* Message Actions */
 .message {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
 }
 
 .message-actions {
   display: flex;
-  gap: 0.5rem;
-  position: absolute;
-  top: -8px;
-  right: 8px;
-  background: var(--glass-bg-strong);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
-  border-radius: 8px;
-  padding: 0.25rem;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding: 0;
   opacity: 0;
-  transform: translateY(4px);
+  transform: translateY(-4px);
   transition: all 0.3s ease;
-  z-index: 10;
 }
 
 .message:hover .message-actions {
@@ -1042,34 +1059,42 @@ html *:not(.messages-container):not(textarea)::-webkit-scrollbar {
 .message-action-btn {
   background: transparent;
   border: none;
-  color: #888888;
+  color: #666666;
   cursor: pointer;
-  padding: 0.375rem;
-  border-radius: 6px;
-  transition: all 0.3s ease;
+  padding: 0.3rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.9rem;
+  font-size: 0;
 }
 
 .message-action-btn:hover {
   background: var(--glass-bg-light);
-  color: #5a9bff;
+  color: #888888;
 }
 
 .message-action-btn.liked {
-  color: #4a8cef;
+  color: #5a9bff;
+}
+
+.message-action-btn.liked:hover {
+  color: #7bbaff;
 }
 
 .message-action-btn.disliked {
   color: #ff6666;
 }
 
+.message-action-btn.disliked:hover {
+  color: #ff8585;
+}
+
 .message-timestamp {
   font-size: 0.7rem;
-  color: #666666;
-  margin-top: 0.25rem;
+  color: #555555;
+  margin-top: 0.35rem;
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -1079,13 +1104,12 @@ html *:not(.messages-container):not(textarea)::-webkit-scrollbar {
 }
 
 /* User message alignment */
-.message.user .message-actions {
-  left: 8px;
-  right: auto;
+.message.user {
+  align-items: flex-end;
 }
 
-.message.user .message-content {
-  background: linear-gradient(135deg, rgba(90, 155, 255, 0.15) 0%, var(--glass-bg) 100%);
+.message.user .message-actions {
+  align-self: flex-end;
 }
 
 /* Streaming animation */
@@ -1099,6 +1123,127 @@ html *:not(.messages-container):not(textarea)::-webkit-scrollbar {
 }
 
 /* Markdown & Code Blocks */
+.markdown-p {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.markdown-p:first-child {
+  margin-top: 0;
+}
+
+.markdown-p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-h1,
+.markdown-h2,
+.markdown-h3,
+.markdown-h4 {
+  margin: 0.75rem 0 0.5rem 0;
+  font-weight: 600;
+  color: #f6f6f6;
+}
+
+.markdown-h1 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--glass-border-light);
+  padding-bottom: 0.25rem;
+}
+
+.markdown-h2 {
+  font-size: 1.25rem;
+}
+
+.markdown-h3 {
+  font-size: 1.1rem;
+}
+
+.markdown-h4 {
+  font-size: 1rem;
+}
+
+.markdown-ul,
+.markdown-ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.markdown-li {
+  margin: 0.25rem 0;
+  line-height: 1.5;
+}
+
+.markdown-a {
+  color: #5a9bff;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.markdown-a:hover {
+  color: #7bbaff;
+  text-decoration: underline;
+}
+
+.markdown-blockquote {
+  margin: 0.75rem 0;
+  padding: 0.5rem 1rem;
+  border-left: 3px solid var(--glass-border);
+  background: var(--glass-bg-light);
+  color: #cccccc;
+  font-style: italic;
+}
+
+.markdown-hr {
+  margin: 1rem 0;
+  border: none;
+  border-top: 1px solid var(--glass-border-light);
+}
+
+.markdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.markdown-thead {
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.markdown-tbody {
+  color: #cccccc;
+}
+
+.markdown-tr {
+  border-bottom: 1px solid var(--glass-border-light);
+}
+
+.markdown-tr:last-child {
+  border-bottom: none;
+}
+
+.markdown-th,
+.markdown-td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.markdown-th {
+  font-weight: 600;
+  color: #f6f6f6;
+}
+
+.markdown-strong {
+  font-weight: 600;
+  color: #f6f6f6;
+}
+
+.markdown-em {
+  font-style: italic;
+  color: #cccccc;
+}
+
 .code-block-wrapper {
   margin: 0.75rem 0;
   border-radius: 12px;

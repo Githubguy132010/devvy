@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { CodeBlockProps } from "../../types";
+import { CopyIcon, CheckIcon } from "../common/Icons";
 
 export function CodeBlock({ language, code, onCopy }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
@@ -21,7 +22,7 @@ export function CodeBlock({ language, code, onCopy }: CodeBlockProps) {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          {copied ? '✓ Copied' : '📋 Copy'}
+          {copied ? <><CheckIcon /> Copied</> : <><CopyIcon /> Copy</>}
         </motion.button>
       </div>
       <pre className="code-block-content">

@@ -1,5 +1,12 @@
 import { motion } from "framer-motion";
 import { MessageActionsProps } from "../../types";
+import {
+  CopyIcon,
+  RegenerateIcon,
+  LikeIcon,
+  DislikeIcon,
+  BranchIcon,
+} from "../common/Icons";
 
 export function MessageActions({
   isCurrentUser,
@@ -19,7 +26,7 @@ export function MessageActions({
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
       >
-        📋
+        <CopyIcon />
       </motion.button>
 
       {!isCurrentUser && onRegenerate && (
@@ -30,7 +37,7 @@ export function MessageActions({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
-          🔄
+          <RegenerateIcon />
         </motion.button>
       )}
 
@@ -43,7 +50,7 @@ export function MessageActions({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
-            👍
+            <LikeIcon />
           </motion.button>
           <motion.button
             className={`message-action-btn ${feedback === 'disliked' ? 'disliked' : ''}`}
@@ -52,7 +59,7 @@ export function MessageActions({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
-            👎
+            <DislikeIcon />
           </motion.button>
         </>
       )}
@@ -65,7 +72,7 @@ export function MessageActions({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
-          🌿
+          <BranchIcon />
         </motion.button>
       )}
     </div>

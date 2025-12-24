@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { IconButtonProps } from "../../types";
+import { LoadingIcon } from "./Icons";
 
 const variantStyles = {
   primary: {
@@ -44,7 +45,7 @@ export function IconButton({
       }}
     >
       {isLoading ? (
-        <span className="icon-loading">⟳</span>
+        <LoadingIcon />
       ) : typeof icon === 'string' ? (
         <span className="icon">{icon}</span>
       ) : (

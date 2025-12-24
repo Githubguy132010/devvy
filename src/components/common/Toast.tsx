@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import type { Toast, ToastProps } from "../../types";
+import { CheckIcon, XIcon, InfoIcon, WarningIcon } from "./Icons";
 
 export function Toast({ toast, onDismiss }: ToastProps) {
   return (
@@ -11,10 +12,10 @@ export function Toast({ toast, onDismiss }: ToastProps) {
       transition={{ duration: 0.3 }}
     >
       <span className={`toast-icon ${toast.type}`}>
-        {toast.type === 'success' && '✓'}
-        {toast.type === 'error' && '✕'}
-        {toast.type === 'info' && 'ℹ'}
-        {toast.type === 'warning' && '⚠'}
+        {toast.type === 'success' && <CheckIcon />}
+        {toast.type === 'error' && <XIcon />}
+        {toast.type === 'info' && <InfoIcon />}
+        {toast.type === 'warning' && <WarningIcon />}
       </span>
       <div className="toast-content">
         <p className="toast-message">{toast.message}</p>
@@ -24,7 +25,7 @@ export function Toast({ toast, onDismiss }: ToastProps) {
         onClick={() => onDismiss()}
         aria-label="Close toast"
       >
-        ×
+        <XIcon />
       </button>
       {toast.duration && (
         <motion.div

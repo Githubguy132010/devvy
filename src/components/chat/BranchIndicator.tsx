@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { BranchIndicatorProps } from "../../types";
+import { BranchIcon } from "../common/Icons";
 
 export function BranchIndicator({ branch, isActive, onClick }: BranchIndicatorProps) {
   return (
@@ -10,7 +11,7 @@ export function BranchIndicator({ branch, isActive, onClick }: BranchIndicatorPr
       whileTap={{ scale: 0.95 }}
       title={`Branch: ${branch.id}`}
     >
-      <span>🌿</span>
+      <BranchIcon />
       <span>Branch</span>
     </motion.button>
   );

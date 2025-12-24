@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Chat } from "../../types";
+import { PlusIcon, EditIcon, DeleteIcon, SettingsIcon } from "../common/Icons";
 
 interface SidebarProps {
   chats: Chat[];
@@ -42,7 +43,8 @@ export function Sidebar({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          + New Chat
+          <PlusIcon />
+          <span>New Chat</span>
         </motion.button>
       </motion.div>
       <div className="chat-history">
@@ -75,7 +77,7 @@ export function Sidebar({
                   whileHover={{ scale: 1.2 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  ✏
+                  <EditIcon />
                 </motion.button>
                 <motion.button
                   className="delete-chat-btn"
@@ -87,7 +89,7 @@ export function Sidebar({
                   whileHover={{ scale: 1.2, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  ×
+                  <DeleteIcon />
                 </motion.button>
               </div>
             </motion.div>
@@ -107,7 +109,7 @@ export function Sidebar({
           whileHover={{ scale: 1.1, rotate: 30 }}
           whileTap={{ scale: 0.9 }}
         >
-          ⚙
+          <SettingsIcon />
         </motion.button>
       </motion.div>
     </aside>

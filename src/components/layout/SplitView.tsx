@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { IconButton } from "../common/IconButton";
 import { SplitViewProps } from "../../types";
+import { CopyIcon, SplitIcon } from "../common/Icons";
 
 export function SplitView({ leftContent, rightContent, showBoth, onToggleSplit, onCopyFromPanel }: SplitViewProps) {
   const [splitRatio, setSplitRatio] = useState(50);
@@ -48,7 +49,7 @@ export function SplitView({ leftContent, rightContent, showBoth, onToggleSplit, 
           <div className="code-panel-header">
             <span className="code-panel-title">Code Panel</span>
             <IconButton
-              icon="📋 Copy"
+              icon={<CopyIcon />}
               onClick={() => onCopyFromPanel('right')}
               title="Copy from panel"
               variant="ghost"
@@ -66,7 +67,8 @@ export function SplitView({ leftContent, rightContent, showBoth, onToggleSplit, 
           animate={{ opacity: 1, x: 0 }}
           whileHover={{ x: 4 }}
         >
-          <span>📑 Split View</span>
+          <SplitIcon />
+          <span>Split View</span>
         </motion.div>
       )}
     </div>

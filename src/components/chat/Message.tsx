@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { MessageProps } from "../../types";
 import { MessageActions } from "./MessageActions";
 import { formatMessageTime } from "../../utils/time";
+import { MarkdownRenderer } from "../../utils/markdown";
 
 export function Message({
   message,
@@ -25,6 +26,9 @@ export function Message({
       }}
       className={`message ${isCurrentUser ? 'user' : 'assistant'} ${message.isStreaming ? 'streaming' : ''}`}
     >
+      <div className="message-content">
+        <MarkdownRenderer content={content} />
+      </div>
       <MessageActions
         isCurrentUser={isCurrentUser}
         feedback={message.feedback || null}
@@ -34,7 +38,6 @@ export function Message({
         onDislike={onFeedback ? () => onFeedback(message.id, 'disliked') : () => {}}
         onBranch={onBranch ? () => onBranch(message.id) : undefined}
       />
-      <span className="message-content">{content}</span>
       <span className="message-timestamp">{formatMessageTime(message.timestamp)}</span>
     </motion.div>
   );
