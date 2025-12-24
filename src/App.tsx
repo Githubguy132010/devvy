@@ -7,10 +7,44 @@ interface Chat {
   messages: string[];
 }
 
+interface ConfirmDialogProps {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }: ConfirmDialogProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="dialog-overlay">
+      <div className="dialog">
+        <div className="dialog-header">
+          <h3>{title}</h3>
+        </div>
+        <div className="dialog-content">
+          <p>{message}</p>
+        </div>
+        <div className="dialog-actions">
+          <button className="dialog-btn dialog-btn-cancel" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="dialog-btn dialog-btn-confirm" onClick={onConfirm}>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [prompt, setPrompt] = useState("");
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; chatId: string | null }>({ isOpen: false, chatId: null });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -64,10 +98,24 @@ function App() {
   }
 
   function deleteChat(chatId: string) {
-    setChats(prev => prev.filter(chat => chat.id !== chatId));
-    if (currentChatId === chatId) {
-      setCurrentChatId(null);
+    setDeleteDialog({
+      isOpen: true,
+      chatId: chatId
+    });
+  }
+
+  function confirmDeleteChat() {
+    if (deleteDialog.chatId) {
+      setChats(prev => prev.filter(chat => chat.id !== deleteDialog.chatId));
+      if (currentChatId === deleteDialog.chatId) {
+        setCurrentChatId(null);
+      }
     }
+    setDeleteDialog({ isOpen: false, chatId: null });
+  }
+
+  function cancelDeleteChat() {
+    setDeleteDialog({ isOpen: false, chatId: null });
   }
 
   function generateChatTitle(messages: string[]): string {
@@ -104,6 +152,7 @@ function App() {
 
   const currentChat = chats.find(chat => chat.id === currentChatId);
   const currentMessages = currentChat?.messages || [];
+  const deleteChatTitle = deleteDialog.chatId ? generateChatTitle(chats.find(c => c.id === deleteDialog.chatId)?.messages || []) : "";
 
   return (
     <main className="container">
@@ -170,6 +219,14 @@ function App() {
 </button>
         </form>
       </div>
+      
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        title="Delete Chat"
+        message={`Are you sure you want to delete "${deleteChatTitle}"? This action cannot be undone.`}
+        onConfirm={confirmDeleteChat}
+        onCancel={cancelDeleteChat}
+      />
     </main>
   );
 }

@@ -304,8 +304,109 @@ body::-webkit-scrollbar,
 /* Only hide scrollbars for non-content elements */
 html *:not(.messages-container):not(textarea)::-webkit-scrollbar {
   display: none !important;
-  width: 0 !important;
-  height: 0 !important;
+}
+
+/* Custom Dialog Styles */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.dialog {
+  background-color: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 12px;
+  min-width: 320px;
+  max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: dialogSlideIn 0.2s ease-out;
+}
+
+@keyframes dialogSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dialog-header {
+  padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.dialog-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #f6f6f6;
+}
+
+.dialog-content {
+  padding: 1rem 1.5rem;
+}
+
+.dialog-content p {
+  margin: 0;
+  color: #cccccc;
+  line-height: 1.5;
+}
+
+.dialog-actions {
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.dialog-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+  min-width: 80px;
+}
+
+.dialog-btn-cancel {
+  background-color: #2a2a2a;
+  border-color: #4a4a4a;
+  color: #f6f6f6;
+}
+
+.dialog-btn-cancel:hover {
+  background-color: #3a3a3a;
+  border-color: #5a5a5a;
+}
+
+.dialog-btn-confirm {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: #ffffff;
+}
+
+.dialog-btn-confirm:hover {
+  background-color: #c82333;
+  border-color: #c82333;
+  transform: scale(1.02);
+}
+
+.dialog-btn:active {
+  transform: scale(0.98);
 }
 
 /* Hide scrollbars globally except for specific scrollable elements */
