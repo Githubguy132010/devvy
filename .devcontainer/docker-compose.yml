@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  devvy:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ../src:/workspace/src:cached
+      - ../src-tauri:/workspace/src-tauri:cached
+      - ../package.json:/workspace/package.json:cached
+      - ../bun.lock:/workspace/bun.lock:cached
+      - ../vite.config.ts:/workspace/vite.config.ts:cached
+      - ../tsconfig.json:/workspace/tsconfig.json:cached
+      - ../tsconfig.node.json:/workspace/tsconfig.node.json:cached
+      - ../index.html:/workspace/index.html:cached
+      - ../public:/workspace/public:cached
+    ports:
+      - "1420:1420"
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    command: sleep infinity
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
