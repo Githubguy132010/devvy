@@ -145,16 +145,16 @@ export function getProviderDisplayName(provider: string): string {
 export function getProviderIcon(provider: string): string {
   switch (provider) {
     case "openai":
-      return "/openai.svg";
+      return "https://cdn.simpleicons.org/openai/412991";
     case "anthropic":
-      return "/anthropic.svg";
+      return "https://cdn.simpleicons.org/anthropic/181818";
     case "google":
-      return "/google.svg";
+      return "https://www.gstatic.com/lamda/images/gemini_sparkle_v002_d4735304ff6292a690345.svg";
     case "ollama":
-      return "/ollama.svg";
+      return "https://avatars.githubusercontent.com/u/151674099?s=200&v=4";
     case "custom":
-      return "/custom.svg";
+      return "https://cdn.simpleicons.org/databricks/FF3621";
     default:
-      return "/custom.svg";
+      return "https://cdn.simpleicons.org/openai/412991";
   }
 }

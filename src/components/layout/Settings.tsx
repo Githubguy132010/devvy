@@ -92,13 +92,13 @@ export function Settings({ llmConfig, onConfigChange }: SettingsProps) {
               ))}
             </select>
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+          <div className="provider-icon-display">
             <img 
               src={getProviderIcon(llmConfig.provider)} 
-              alt={llmConfig.provider}
-              style={{ width: '24px', height: '24px', opacity: 0.8 }}
+              alt={getProviderDisplayName(llmConfig.provider)}
+              className="provider-icon"
             />
-            <span style={{ fontSize: '0.9em', opacity: 0.7 }}>
+            <span className="provider-name">
               {getProviderDisplayName(llmConfig.provider)}
             </span>
           </div>
@@ -218,7 +218,7 @@ export function Settings({ llmConfig, onConfigChange }: SettingsProps) {
               />
             </label>
             {llmConfig.provider === "custom" && (
-              <p style={{ fontSize: '0.85em', opacity: 0.6, marginTop: '4px' }}>
+              <p className="setting-description">
                 For OpenAI-compatible APIs (e.g., LM Studio, LocalAI, vLLM, etc.)
               </p>
             )}

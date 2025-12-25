@@ -349,8 +349,9 @@ h1 {
 
 .setting-item {
   display: flex;
-  align-items: center;
-  padding: 0.5rem 0;
+  flex-direction: column;
+  padding: 0.75rem 0;
+  gap: 0.5rem;
 }
 
 .setting-item label {
@@ -364,6 +365,51 @@ h1 {
 .setting-label {
   color: #f6f6f6;
   font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.provider-icon-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.75rem;
+  background: rgba(10, 10, 10, 0.5);
+  border: 1px solid var(--glass-border-light);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+.provider-icon-display:hover {
+  border-color: rgba(90, 155, 255, 0.3);
+  background: rgba(10, 10, 10, 0.6);
+}
+
+.provider-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: brightness(1.1);
+  transition: transform 0.2s ease;
+}
+
+.provider-icon-display:hover .provider-icon {
+  transform: scale(1.05);
+}
+
+.provider-name {
+  color: #f6f6f6;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.setting-description {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.85rem;
+  color: #888888;
+  line-height: 1.4;
 }
 
 .setting-input,
