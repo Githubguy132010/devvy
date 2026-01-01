@@ -1,10 +1,9 @@
 FROM mcr.microsoft.com/vscode/devcontainers/base:ubuntu-22.04
 
-# Install Node.js
-RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends nodejs npm \
-    && npm install -g yarn \
-    && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+# Install NVM and Node.js 25
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+RUN /bin/bash -c "source ~/.nvm/nvm.sh && nvm install 25 && nvm alias default 25"
+ENV PATH="/root/.nvm/versions/node/v25.0.0/bin:${PATH}"
 
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -36,7 +35,8 @@ WORKDIR /workspace
 
 # Install project dependencies
 COPY package.json bun.lock ./
-RUN npm install -g bun
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
 RUN bun install
 
 COPY . .
